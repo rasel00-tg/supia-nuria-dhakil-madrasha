@@ -104,7 +104,6 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
             </div>
 
             {/* Hide AI Button on Dashboard Routes, but keep on Login. Hide Footer on Dashboard AND Login */}
-            {!isDashboard && <AiFloatingButton />}
             {!isDashboard && !isLoginPage && <Footer />}
         </div>
     )

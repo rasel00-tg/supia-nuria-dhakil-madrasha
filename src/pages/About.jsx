@@ -1,6 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircle } from 'lucide-react'
+import AiFloatingButton from '../components/AiFloatingButton'
 
 const About = () => {
     return (
@@ -115,6 +116,9 @@ const About = () => {
                     </div>
                 </div>
             </section>
+
+            {/* AI Assistant - Only on About Page */}
+            <AiFloatingButton />
         </div>
     )
 }
