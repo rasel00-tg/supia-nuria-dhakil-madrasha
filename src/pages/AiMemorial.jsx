@@ -35,7 +35,7 @@ const AiMemorial = () => {
                     <h2 className="text-3xl md:text-5xl font-black mb-3 text-emerald-400 font-serif">হাফেজ মোহাম্মদ ইমরান</h2>
                     <p className="text-slate-400 font-bold tracking-[0.3em] uppercase text-sm mb-10">জেডিসি ব্যাচ 2018</p>
 
-                    <div className="space-y-6 text-slate-300 leading-relaxed text-lg md:text-xl font-medium max-w-3xl mx-auto">
+                    <div className="space-y-4 md:space-y-6 text-slate-300 leading-relaxed text-sm md:text-xl font-medium max-w-3xl mx-auto text-justify md:text-center">
                         <p>
                             আমাদের জীবনের কিছু মানুষ থাকে, যাদের উপস্থিতি খুব অল্প সময়ের হলেও তাদের শূন্যতা সারাজীবনের জন্য থেকে যায়।
                         </p>
@@ -51,15 +51,15 @@ const AiMemorial = () => {
                         <p>
                             কিছু মৃত্যু কেবল মানুষকে নেয় না, বরং রেখে যায় প্রশ্ন, কষ্ট আর নীরব দীর্ঘশ্বাস। ইমরানের মৃত্যু আমাদের শিখিয়েছে—জীবন খুবই ক্ষণস্থায়ী, আর সবচেয়ে বড় সৌভাগ্য হলো আল্লাহর কালাম বুকে নিয়ে দুনিয়া ছাড়তে পারা।
                         </p>
-                        <div className="bg-emerald-900/20 p-6 rounded-2xl border border-emerald-500/20 mt-8">
-                            <p className="text-emerald-300 font-serif italic text-xl md:text-2xl leading-relaxed">
+                        <div className="bg-emerald-900/20 p-4 md:p-6 rounded-2xl border border-emerald-500/20 mt-6 md:mt-8">
+                            <p className="text-emerald-300 font-serif italic text-base md:text-2xl leading-relaxed">
                                 "হে আল্লাহ, আমাদের প্রিয় সহপাঠী মোহাম্মদ ইমরানকে জান্নাতুল ফেরদৌস নসিব করুন, তার কবরকে প্রশস্ত করুন, নূরে ভরিয়ে দিন, আর কুরআনকে তার জন্য শাফায়াতকারী বানিয়ে দিন। আর আমাদের জন্য রেখে যাওয়া তার স্মৃতিকে কবুল করুন—যেন তা আমাদের গুনাহ থেকে ফেরায়, আখিরাতের কথা মনে করিয়ে দেয়। আমিন।"
                             </p>
                         </div>
                     </div>
 
-                    <div className="mt-12 pt-8 border-t border-white/10 flex items-center justify-center gap-2 text-slate-500 text-sm font-bold">
-                        <Heart size={16} className="text-rose-500 fill-rose-500 animate-pulse" />
+                    <div className="mt-8 md:mt-12 pt-6 md:pt-8 border-t border-white/10 flex items-center justify-center gap-2 text-slate-500 text-xs md:text-sm font-bold">
+                        <Heart size={14} className="text-rose-500 fill-rose-500 animate-pulse" />
                         স্মরণে: সকল সহপাঠী (জে.ডি.সি ব্যাচ-১৮)
                     </div>
                 </motion.div>
