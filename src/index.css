@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .animate-marquee {
+    animation: marquee 20s linear infinite;
+  }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(100%);
+    }
+
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+}
+
+@theme {
+  --font-sans: 'Hind Siliguri', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
+  --font-bengali: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+  --color-madrasha-primary: #059669;
+  --color-madrasha-secondary: #0f172a;
+  --color-madrasha-accent: #10b981;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-slate-900 bg-slate-50 font-bengali;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Print Styles */
+@media print {
+  @page {
+    margin: 2cm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: white;
+    font-size: 12pt;
+    color: black;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  nav,
+  footer,
+  button,
+  .sidebar,
+  .hamburger-menu,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Show print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    border-bottom: 2px solid #000;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+  }
+
+  .print-content {
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure text is black */
+  * {
+    color: black !important;
+    text-shadow: none !important;
+  }
+}
