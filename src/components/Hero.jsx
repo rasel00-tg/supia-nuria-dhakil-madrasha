@@ -51,7 +51,7 @@ const Hero = () => {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2, duration: 0.8 }}
-                        className="text-2xl sm:text-4xl md:text-5xl lg:text-7xl font-black text-white drop-shadow-2xl leading-tight font-bengali whitespace-nowrap"
+                        className="text-4xl sm:text-5xl md:text-5xl lg:text-7xl font-black text-white drop-shadow-2xl leading-tight font-bengali whitespace-nowrap"
                     >
                         সুফিয়া নূরীয়া <span className="text-emerald-400">দাখিল মাদ্রাসা</span>
                     </motion.h1>
@@ -88,14 +88,16 @@ const Hero = () => {
                         <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                         <span className="flex items-center justify-center gap-1.5 relative z-10">
                             ভর্তি আবেদন
-                            <Send size={14} className="group-hover:translate-x-1 transition-transform" />
+                            <Send size={20} className="group-hover:translate-x-1 transition-transform" />
                         </span>
                     </Link>
                     <a
                         href="#about"
-                        className="px-5 py-2.5 md:px-10 md:py-4 bg-white/10 backdrop-blur-md text-white font-bold text-xs md:text-xl rounded-full border border-white/20 hover:bg-white hover:text-slate-900 transition-all active:scale-95 flex items-center justify-center font-bengali"
+                        className="px-5 py-2.5 md:px-10 md:py-4 bg-white/10 backdrop-blur-md text-white font-bold text-xs md:text-xl rounded-full border border-white/20 hover:bg-white hover:text-slate-900 transition-all active:scale-95 flex items-center justify-center gap-2 font-bengali group"
                     >
                         বিস্তারিত জানুন
+                        {/* Implied icon addition for "icons" plural request */}
+                        <div className="w-1.5 h-1.5 rounded-full bg-white group-hover:bg-slate-900 transition-colors" />
                     </a>
                 </motion.div>
             </div>

@@ -96,11 +96,11 @@ const Footer = () => {
             {/* Background Accent */}
             <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-indigo-600 to-emerald-500" />
 
-            <div className="container mx-auto px-6 py-16 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-16 pb-16 border-b border-white/5">
-                    {/* About Column */}
-                    <div className="lg:col-span-5 space-y-8">
-                        <div className="flex items-center gap-4">
+            <div className="container mx-auto px-6 py-10 md:py-16 relative z-10">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-12 gap-y-10 gap-x-4 md:gap-16 pb-16 border-b border-white/5">
+                    {/* About Column - Full width on mobile */}
+                    <div className="col-span-2 lg:col-span-5 space-y-4 md:space-y-8 text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-4">
                             <div className="bg-white/10 p-3 rounded-2xl backdrop-blur-md">
                                 <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
                             </div>
@@ -109,26 +109,26 @@ const Footer = () => {
                                 <p className="text-[10px] uppercase font-black tracking-[0.2em] text-emerald-500 mt-1">দাখিল মাদ্রাসা</p>
                             </div>
                         </div>
-                        <p className="text-lg font-medium leading-relaxed max-w-md">
-                            একটি আধুনিক ও যুগোপযোগী দ্বীনি শিক্ষা প্রতিষ্ঠান। যেখানে ইসলামের শিক্ষার পাশাপাশি আধুনিক শিক্ষার সমন্বয় ঘটানো হয়। আমরা নৈতিক ও মানবিক গুণাবলিসম্পন্ন নাগরিক গড়তে অঙ্গীকারবদ্ধ।
+                        <p className="text-sm md:text-lg font-medium leading-relaxed max-w-md mx-auto md:mx-0">
+                            একটি আধুনিক ও যুগোপযোগী দ্বীনি শিক্ষা প্রতিষ্ঠান। যেখানে ইসলামের শিক্ষার পাশাপাশি আধুনিক শিক্ষার সমন্বয় ঘটানো হয়।
                         </p>
-                        <div className="flex gap-4">
+                        <div className="flex justify-center md:justify-start gap-4">
                             {[
                                 { icon: Facebook, color: 'hover:bg-[#1877F2]' },
                                 { icon: Youtube, color: 'hover:bg-[#FF0000]' },
                                 { icon: Twitter, color: 'hover:bg-[#1DA1F2]' }
                             ].map((social, i) => (
-                                <button key={i} className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center transition-all ${social.color} hover:text-white group`}>
-                                    <social.icon size={20} className="group-hover:scale-110 transition-transform" />
+                                <button key={i} className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center transition-all ${social.color} hover:text-white group`}>
+                                    <social.icon size={18} className="group-hover:scale-110 transition-transform" />
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Quick Links Column */}
-                    <div className="lg:col-span-3 space-y-6">
-                        <h4 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-4">প্রয়োজনীয় লিংক</h4>
-                        <ul className="space-y-4">
+                    {/* Quick Links Column - Left side on mobile */}
+                    <div className="col-span-1 lg:col-span-3 space-y-4 md:space-y-6">
+                        <h4 className="text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-4">প্রয়োজনীয় লিংক</h4>
+                        <ul className="space-y-2 md:space-y-4">
                             {[
                                 { label: 'হোম', path: '/' },
                                 { label: 'শিক্ষক তালিকা', path: '/teachers' },
@@ -137,8 +137,8 @@ const Footer = () => {
                                 { label: 'যোগাযোগ', path: '/contact' }
                             ].map((link) => (
                                 <li key={link.path}>
-                                    <Link to={link.path} className="text-lg font-bold hover:text-white hover:translate-x-2 transition-all flex items-center gap-2 group">
-                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full scale-0 group-hover:scale-100 transition-transform" />
+                                    <Link to={link.path} className="text-xs md:text-lg font-bold hover:text-white hover:translate-x-2 transition-all flex items-center gap-2 group">
+                                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-emerald-500 rounded-full scale-0 group-hover:scale-100 transition-transform" />
                                         {link.label}
                                     </Link>
                                 </li>
@@ -146,27 +146,30 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Contact Column */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <h4 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-4">যোগাযোগ কেন্দ্র</h4>
-                        <div className="space-y-6 text-lg">
-                            <div className="flex gap-4 items-start">
-                                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center shrink-0">
+                    {/* Contact Column - Right side on mobile */}
+                    <div className="col-span-1 lg:col-span-4 space-y-4 md:space-y-6">
+                        <h4 className="text-white font-black text-[10px] md:text-xs uppercase tracking-[0.2em] mb-2 md:mb-4">যোগাযোগ কেন্দ্র</h4>
+                        <div className="space-y-4 md:space-y-6 text-xs md:text-lg">
+                            <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start">
+                                <MapPin size={16} className="text-emerald-500 md:hidden" />
+                                <div className="w-10 h-10 bg-white/5 rounded-xl hidden md:flex items-center justify-center shrink-0">
                                     <MapPin size={20} className="text-emerald-500" />
                                 </div>
-                                <p className="font-bold">নতুন পল্লান পাড়া, ৪নং ওয়ার্ড, <br /> টেকনাফ, কক্সবাজার</p>
+                                <p className="font-bold">টেকনাফ, কক্সবাজার</p>
                             </div>
-                            <div className="flex gap-4 items-center">
-                                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center shrink-0">
+                            <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center">
+                                <Phone size={16} className="text-indigo-500 md:hidden" />
+                                <div className="w-10 h-10 bg-white/5 rounded-xl hidden md:flex items-center justify-center shrink-0">
                                     <Phone size={20} className="text-indigo-500" />
                                 </div>
-                                <p className="font-bold">01866495086 (সুপার)</p>
+                                <p className="font-bold break-all">01866495086</p>
                             </div>
-                            <div className="flex gap-4 items-center">
-                                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center shrink-0">
+                            <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center">
+                                <Mail size={16} className="text-purple-500 md:hidden" />
+                                <div className="w-10 h-10 bg-white/5 rounded-xl hidden md:flex items-center justify-center shrink-0">
                                     <Mail size={20} className="text-purple-500" />
                                 </div>
-                                <p className="font-bold">supianuriadhakil.edu@gmail.com</p>
+                                <p className="font-bold break-all">supianuria@...</p>
                             </div>
                         </div>
                     </div>
