@@ -18,7 +18,8 @@ const Routine = () => {
             'প্রবেশপত্র ছাড়া পরীক্ষায় অংশগ্রহণ করা যাবে না।',
             'ইলেকট্রনিক ডিভাইস সম্পূর্ণ নিষিদ্ধ।'
         ],
-        imageUrl: null
+        imageUrl: null,
+        routine: []
     })
 
     useEffect(() => {
@@ -117,46 +118,36 @@ const Routine = () => {
                         ) : (
                             <div className="overflow-x-auto rounded-xl border border-slate-200">
                                 <table className="w-full min-w-[800px] border-collapse bg-white text-left">
-                                    <thead>
-                                        <tr className="bg-slate-100 text-slate-800">
-                                            <th className="p-4 border-b border-r border-slate-200 font-black">তারিখ</th>
-                                            <th className="p-4 border-b border-r border-slate-200 font-black">বার</th>
-                                            <th className="p-4 border-b border-r border-slate-200 font-black">শ্রেণি ও বিষয়</th>
-                                            <th className="p-4 border-b border-slate-200 font-black">সময়</th>
+                                    <thead className="bg-[#ea580c] text-white">
+                                        <tr>
+                                            <th className="p-4 border-b border-r border-orange-500 font-bold whitespace-nowrap">তারিখ</th>
+                                            <th className="p-4 border-b border-r border-orange-500 font-bold whitespace-nowrap">দিন</th>
+                                            <th className="p-4 border-b border-r border-orange-500 font-bold whitespace-nowrap">বিষয় ও সময়</th>
+                                            <th className="p-4 border-b border-orange-500 font-bold whitespace-nowrap">বিষয় কোড</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {/* Mock Data Rows */}
-                                        <tr className="border-b border-slate-100">
-                                            <td className="p-4 font-bold text-slate-600 border-r border-slate-100">১০ জানুয়ারি, ২০২৬</td>
-                                            <td className="p-4 font-bold text-slate-600 border-r border-slate-100">শনিবার</td>
-                                            <td className="p-4 border-r border-slate-100">
-                                                <div className="space-y-2">
-                                                    {routines.map((r, i) => (
-                                                        <div key={i} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg">
-                                                            <span className="font-black text-slate-800">{r.class}</span>
-                                                            <span className="text-emerald-600 font-bold">{r.subject}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="p-4 font-bold text-slate-600">সকাল ১০:০০ - দুপুর ১:০০</td>
-                                        </tr>
-                                        <tr className="border-b border-slate-100 bg-slate-50/50">
-                                            <td className="p-4 font-bold text-slate-600 border-r border-slate-200">১২ জানুয়ারি, ২০২৬</td>
-                                            <td className="p-4 font-bold text-slate-600 border-r border-slate-200">সোমবার</td>
-                                            <td className="p-4 border-r border-slate-200">
-                                                <div className="space-y-2">
-                                                    {routines.map((r, i) => (
-                                                        <div key={i} className="flex justify-between items-center bg-white border border-slate-100 p-2 rounded-lg">
-                                                            <span className="font-black text-slate-800">{r.class}</span>
-                                                            <span className="text-emerald-600 font-bold">{r.subject} (২য় পত্র)</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="p-4 font-bold text-slate-600">সকাল ১০:০০ - দুপুর ১:০০</td>
-                                        </tr>
+                                        {/* Dynamic Data from Firebase */}
+                                        {(examData.routine || []).map((item, index) => (
+                                            <tr key={index} className="border-b border-slate-200 odd:bg-yellow-50 even:bg-white text-slate-800">
+                                                <td className="p-4 font-bold border-r border-slate-200 whitespace-nowrap">{item.date}</td>
+                                                <td className="p-4 font-bold border-r border-slate-200 whitespace-nowrap">{item.day}</td>
+                                                <td className="p-4 font-bold border-r border-slate-200">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-base text-slate-900">{item.subject}</span>
+                                                        <span className="text-sm text-slate-600 mt-1">{item.time}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 font-bold text-center text-slate-900">{item.code}</td>
+                                            </tr>
+                                        ))}
+                                        {(!examData.routine || examData.routine.length === 0) && (
+                                            <tr>
+                                                <td colSpan="4" className="p-8 text-center text-slate-500 font-bold">
+                                                    কোনো রুটিন তথ্য পাওয়া যায়নি।
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
