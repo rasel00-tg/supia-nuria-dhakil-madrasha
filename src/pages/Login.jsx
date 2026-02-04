@@ -1,11 +1,49 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Lock, User, AlertCircle, ArrowLeft, Clock, ShieldAlert, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Lock, User, AlertCircle, ArrowLeft, Clock, ShieldAlert, ArrowRight, CheckCircle } from 'lucide-react'
 import logo from '../assets/logo.png'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, db } from '../firebase'
 import { doc, getDoc } from 'firebase/firestore'
+
+// Custom Popup Component for Login
+const LoginPopup = ({ isOpen, title, message, onClose }) => {
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl text-center relative overflow-hidden border border-white/50"
+                        >
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 to-teal-500" />
+
+                            <div className="w-20 h-20 mx-auto bg-emerald-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                                <CheckCircle size={40} className="text-emerald-500" />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-slate-800 mb-2">{title}</h3>
+                            <p className="text-slate-500 font-medium text-sm leading-relaxed mb-8">{message}</p>
+
+                            <button onClick={onClose} className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-95">
+                                ড্যাশবোর্ডে প্রবেশ করুন
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    )
+}
 
 const Login = () => {
     const navigate = useNavigate()
@@ -18,6 +56,9 @@ const Login = () => {
     const [error, setError] = useState(null)
     const [showForgotModal, setShowForgotModal] = useState(false)
     const [showSecurityDetails, setShowSecurityDetails] = useState(false)
+
+    // Popup State
+    const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', targetPath: '' })
 
     // Lockout State
     const [failedAttempts, setFailedAttempts] = useState(0)
@@ -88,6 +129,11 @@ const Login = () => {
         }
     }
 
+    const handlePopupClose = () => {
+        setPopup({ ...popup, isOpen: false })
+        navigate(popup.targetPath)
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (isLocked) return
@@ -111,48 +157,51 @@ const Login = () => {
             localStorage.setItem('loginFailedAttempts', '0')
             localStorage.removeItem('loginLockoutEndTime')
 
-            // 2. Multi-Collection Role Check Strategy
-            // We'll check 'users' first, but also check 'admins' specifically to fix the admin redirect issue.
-
-            // Check Users Collection (Modern Schema)
+            // 2. Role Logic
             const userRef = doc(db, 'users', user.uid)
             const userSnap = await getDoc(userRef)
-
-            // Check Admins Collection (Legacy/Specific Schema)
             const adminRef = doc(db, 'admins', user.uid)
             const adminSnap = await getDoc(adminRef)
-
-            // Check Teachers
             const teacherRef = doc(db, 'teachers', user.uid)
             const teacherSnap = await getDoc(teacherRef)
 
             let finalRole = 'student' // Default fallback
+            let displayName = user.displayName || 'User'
 
-            // Priority Logic
             if (adminSnap.exists()) {
                 finalRole = 'admin'
+                displayName = adminSnap.data()?.full_name || 'Admin'
             } else if (teacherSnap.exists()) {
                 finalRole = 'teacher'
+                displayName = teacherSnap.data()?.full_name || 'Teacher'
             } else if (userSnap.exists()) {
                 const userData = userSnap.data()
-                if (userData.role) {
-                    finalRole = userData.role.toLowerCase().trim()
-                }
+                if (userData.role) finalRole = userData.role.toLowerCase().trim()
+                displayName = userData.full_name || 'Student'
             }
 
-            // 3. Direct Navigation based on Final Role
-            if (finalRole === 'admin') {
-                navigate('/admin') // Redirects to Admin Dashboard
-            } else if (finalRole === 'teacher') {
-                navigate('/teacher')
-            } else {
-                navigate('/student')
+            // Show Welcome Popup
+            let roleTitle = 'শিক্ষার্থী'
+            if (finalRole === 'admin') roleTitle = 'এডমিন'
+            if (finalRole === 'teacher') roleTitle = 'শিক্ষক'
+
+            let welcomeMsg = `প্রিয় ${roleTitle} ${displayName}, আসসালামু আলাইকুম। আপনাকে প্যানেলে স্বাগতম।`
+            if (finalRole === 'student') {
+                welcomeMsg = `প্রিয় শিক্ষার্থী ${displayName}, আসসালামু আলাইকুম। আপনাকে স্বাগতম।`
             }
+
+            setPopup({
+                isOpen: true,
+                title: 'স্বাগতম!',
+                message: welcomeMsg,
+                targetPath: `/${finalRole}`
+            })
+
+            setLoading(false)
 
         } catch (err) {
             console.error("Login Error:", err)
             handleFailedAttempt()
-            // Generic message for security, except for network errors
             const msg = err.code === 'auth/network-request-failed'
                 ? 'ইন্টারনেট সংযোগ পরীক্ষা করুন।'
                 : 'ইমেইল বা পাসওয়ার্ড সঠিক নয়।'
@@ -207,6 +256,8 @@ const Login = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden font-bengali">
+            <LoginPopup isOpen={popup.isOpen} title={popup.title} message={popup.message} onClose={handlePopupClose} />
+
             {/* Background Decorations */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
