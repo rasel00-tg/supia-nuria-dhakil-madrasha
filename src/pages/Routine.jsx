@@ -1,5 +1,6 @@
 import React, { useRef } from 'react'
 import { Printer, Download, Calendar } from 'lucide-react'
+import html2canvas from 'html2canvas'
 import logo from '../assets/logo.png'
 import BackButton from '../components/BackButton'
 
@@ -8,6 +9,22 @@ const Routine = () => {
 
     const handlePrint = () => {
         window.print()
+    }
+
+    const handleDownload = async () => {
+        const element = componentRef.current
+        const canvas = await html2canvas(element, {
+            scale: 2, // Higher resolution
+            backgroundColor: '#ffffff'
+        })
+
+        const data = canvas.toDataURL('image/png')
+        const link = document.createElement('a')
+        link.href = data
+        link.download = 'Exam_Routine_2026.png'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     }
 
     const routines = [
@@ -34,7 +51,9 @@ const Routine = () => {
                         <Printer size={20} />
                         প্রিন্ট করুন
                     </button>
-                    <button className="flex items-center gap-2 bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-black hover:bg-slate-300 transition-all active:scale-95">
+                    <button
+                        onClick={handleDownload}
+                        className="flex items-center gap-2 bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-black hover:bg-slate-300 transition-all active:scale-95">
                         <Download size={20} />
                         ডাউনলোড
                     </button>
@@ -56,7 +75,7 @@ const Routine = () => {
 
                 {/* Routine Table */}
                 <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                    <table className="w-full min-w-[800px] border-collapse">
                         <thead>
                             <tr className="bg-slate-100 text-slate-700">
                                 <th className="p-4 text-left border border-slate-200 font-black">তারিখ</th>

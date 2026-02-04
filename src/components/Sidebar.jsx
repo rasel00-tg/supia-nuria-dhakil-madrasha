@@ -20,7 +20,7 @@ const Sidebar = () => {
     const location = useLocation()
 
     // Hide sidebar on AI pages
-    if (location.pathname === '/ai-chat' || location.pathname === '/ai-memorial') {
+    if (location.pathname === '/ai-chat' || location.pathname === '/ai-memorial' || location.pathname === '/routine') {
         return null
     }
 
