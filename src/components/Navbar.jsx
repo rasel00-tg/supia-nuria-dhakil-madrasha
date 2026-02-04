@@ -21,6 +21,8 @@ const Navbar = () => {
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
+    if (location.pathname === '/routine') return null
+
     useEffect(() => {
         const fetchMarqueeNotices = async () => {
             const { data } = await supabase.from('notices').select('title').order('created_at', { ascending: false }).limit(5)
