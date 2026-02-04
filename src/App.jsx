@@ -30,6 +30,7 @@ import Preloader from './components/Preloader'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import AiFloatingButton from './components/AiFloatingButton'
+import WelcomeScreen from './components/WelcomeScreen'
 
 export const AuthContext = createContext()
 
@@ -114,6 +115,16 @@ const App = () => {
     const [user, setUser] = useState(null)
     const [role, setRole] = useState(null)
     const [isAuthChecking, setIsAuthChecking] = useState(true)
+    const [showWelcome, setShowWelcome] = useState(false)
+
+    useEffect(() => {
+        // Welcome Screen Logic - Show only once per session
+        const hasVisited = sessionStorage.getItem('welcomeShown')
+        if (!hasVisited) {
+            setShowWelcome(true)
+            sessionStorage.setItem('welcomeShown', 'true')
+        }
+    }, [])
 
     useEffect(() => {
         // Check for Demo Mode first
@@ -218,6 +229,7 @@ const App = () => {
                     isAuthChecking={isAuthChecking}
                 />
             </Router>
+            {showWelcome && <WelcomeScreen onComplete={() => setShowWelcome(false)} />}
         </AuthContext.Provider>
     )
 }

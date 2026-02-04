@@ -57,7 +57,7 @@ const Preloader = () => {
                     transition={{ delay: 1.5 }}
                     className="mt-6 text-slate-500 font-bold text-xs uppercase tracking-widest"
                 >
-                    Loading Excellence...
+                    সুফিয়া নূরীয়া দাখিল মাদ্রাসা লোডিং হচ্ছে....
                 </motion.p>
             </div>
         </div>

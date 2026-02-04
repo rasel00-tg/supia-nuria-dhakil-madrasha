@@ -169,7 +169,7 @@ const Footer = () => {
                                 <div className="w-10 h-10 bg-white/5 rounded-xl hidden md:flex items-center justify-center shrink-0">
                                     <Mail size={20} className="text-purple-500" />
                                 </div>
-                                <p className="font-bold break-all">supianuria@...</p>
+                                <p className="font-bold break-all">supianuriadakhilmadrasha@gmail.com</p>
                             </div>
                         </div>
                     </div>
