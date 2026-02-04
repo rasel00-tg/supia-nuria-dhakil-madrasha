@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { Printer, Download, Calendar } from 'lucide-react'
+import { Printer, Download, Calendar, ChevronDown, Check } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -11,6 +11,8 @@ const Routine = () => {
     const componentRef = useRef()
     const [loading, setLoading] = useState(true)
     const [scale, setScale] = useState(1)
+    const [selectedClass, setSelectedClass] = useState('সকল শ্রেণি')
+    const [showClassPopup, setShowClassPopup] = useState(false)
     const [examData, setExamData] = useState({
         name: 'বার্ষিক পরীক্ষা - ২০২৬',
         date: 'শুরু: ১২ ডিসেম্বর, ২০২৫',
@@ -22,6 +24,12 @@ const Routine = () => {
         imageUrl: null,
         routine: []
     })
+
+    const classList = [
+        'সকল শ্রেণি',
+        '১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি', '৪র্থ শ্রেণি', '৫ম শ্রেণি',
+        '৬ষ্ঠ শ্রেণি', '৭ম শ্রেণি', '৮ম শ্রেণি', '৯ম শ্রেণি', '১০ম শ্রেণি'
+    ]
 
     useEffect(() => {
         const fetchRoutine = async () => {
@@ -87,6 +95,12 @@ const Routine = () => {
         document.body.removeChild(link)
     }
 
+    // Filter Logic
+    const filteredRoutine = (examData.routine || []).filter(item => {
+        if (selectedClass === 'সকল শ্রেণি') return true
+        return item.class === selectedClass
+    })
+
     if (loading) return <Preloader />
 
     return (
@@ -117,9 +131,63 @@ const Routine = () => {
                 }
             `}</style>
 
-            {/* Top Navigation Row */}
-            <div className="p-4 md:p-6 no-print">
-                <BackButton />
+            {/* Sticky Header with Controls */}
+            <div className="sticky top-0 left-0 right-0 p-4 md:p-6 bg-white/80 backdrop-blur-md border-b border-slate-200 z-[100] no-print mb-4 shadow-sm">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                    <BackButton />
+
+                    <div className="flex gap-3 items-center w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+                        {/* Class Filter Button */}
+                        <div className="relative shrink-0">
+                            <button
+                                onClick={() => setShowClassPopup(!showClassPopup)}
+                                className="flex items-center gap-2 bg-white px-5 py-2.5 rounded-xl border border-slate-200 shadow-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
+                            >
+                                {selectedClass}
+                                <ChevronDown size={18} className="text-slate-400" />
+                            </button>
+
+                            {/* Class Popup Menu */}
+                            {showClassPopup && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowClassPopup(false)}></div>
+                                    <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden py-2 animate-in fade-in zoom-in-95 duration-200">
+                                        {classList.map((cls) => (
+                                            <button
+                                                key={cls}
+                                                onClick={() => {
+                                                    setSelectedClass(cls)
+                                                    setShowClassPopup(false)
+                                                }}
+                                                className={`w-full text-left px-5 py-3 hover:bg-slate-50 font-bold flex justify-between items-center transition-colors ${selectedClass === cls ? 'text-emerald-600 bg-emerald-50' : 'text-slate-600'
+                                                    }`}
+                                            >
+                                                {cls}
+                                                {selectedClass === cls && <Check size={16} />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Top Action Buttons */}
+                        <button
+                            onClick={handlePrint}
+                            className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-md active:scale-95 whitespace-nowrap"
+                        >
+                            <Printer size={18} />
+                            প্রিন্ট
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            className="flex items-center gap-2 bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-slate-700 transition-all shadow-md active:scale-95 whitespace-nowrap"
+                        >
+                            <Download size={18} />
+                            ডাউনলোড
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Main Content Area with Scale Logic */}
@@ -146,11 +214,16 @@ const Routine = () => {
                             <h2 className="text-2xl md:text-3xl font-black text-emerald-700 mb-2">
                                 {examData.name || 'আসন্ন পরীক্ষার রুটিন'}
                             </h2>
-                            <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
-                                <Calendar size={18} className="text-slate-500" />
-                                <span className="font-bold text-slate-700 text-lg">
-                                    {examData.date || 'তারিখ শীঘ্রই প্রকাশিত হবে'}
-                                </span>
+                            <div className="flex flex-col items-center gap-2 mt-2">
+                                <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm">
+                                    <Calendar size={18} className="text-slate-500" />
+                                    <span className="font-bold text-slate-700 text-lg">
+                                        {examData.date || 'তারিখ শীঘ্রই প্রকাশিত হবে'}
+                                    </span>
+                                </div>
+                                <div className="mt-2 text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">
+                                    {selectedClass === 'সকল শ্রেণি' ? 'সকল শ্রেণির রুটিন' : `${selectedClass}-এর রুটিন`}
+                                </div>
                             </div>
                         </div>
 
@@ -170,31 +243,28 @@ const Routine = () => {
                                     <table className="w-full border-collapse bg-white text-left">
                                         <thead className="bg-[#ea580c] text-white">
                                             <tr>
-                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap">তারিখ</th>
-                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap">দিন</th>
-                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap">বিষয় ও সময়</th>
-                                                <th className="p-3 border-b border-orange-500 font-bold whitespace-nowrap">বিষয় কোড</th>
+                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap text-center">তারিখ</th>
+                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap text-center">বার</th>
+                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap">বিষয়</th>
+                                                <th className="p-3 border-b border-r border-orange-500 font-bold whitespace-nowrap text-center">সময়</th>
+                                                <th className="p-3 border-b border-orange-500 font-bold whitespace-nowrap text-center">বিষয় কোড</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {/* Dynamic Data from Firebase */}
-                                            {(examData.routine || []).map((item, index) => (
+                                            {filteredRoutine.map((item, index) => (
                                                 <tr key={index} className="border-b border-slate-200 odd:bg-yellow-50 even:bg-white text-slate-800">
-                                                    <td className="p-3 font-bold border-r border-slate-200 whitespace-nowrap">{item.date}</td>
-                                                    <td className="p-3 font-bold border-r border-slate-200 whitespace-nowrap">{item.day}</td>
-                                                    <td className="p-3 font-bold border-r border-slate-200">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-base text-slate-900">{item.subject}</span>
-                                                            <span className="text-sm text-slate-600 mt-1">{item.time}</span>
-                                                        </div>
-                                                    </td>
+                                                    <td className="p-3 font-bold border-r border-slate-200 whitespace-nowrap text-center">{item.date}</td>
+                                                    <td className="p-3 font-bold border-r border-slate-200 whitespace-nowrap text-center">{item.day}</td>
+                                                    <td className="p-3 font-bold border-r border-slate-200 text-slate-900">{item.subject}</td>
+                                                    <td className="p-3 font-bold border-r border-slate-200 whitespace-nowrap text-center text-slate-600 bg-slate-50/50">{item.time}</td>
                                                     <td className="p-3 font-bold text-center text-slate-900">{item.code}</td>
                                                 </tr>
                                             ))}
-                                            {(!examData.routine || examData.routine.length === 0) && (
+                                            {(filteredRoutine.length === 0) && (
                                                 <tr>
-                                                    <td colSpan="4" className="p-8 text-center text-slate-500 font-bold">
-                                                        কোনো রুটিন তথ্য পাওয়া যায়নি।
+                                                    <td colSpan="5" className="p-12 text-center text-slate-400 font-bold bg-slate-50">
+                                                        এই শ্রেণির জন্য কোনো রুটিন পাওয়া যায়নি।
                                                     </td>
                                                 </tr>
                                             )}
@@ -235,26 +305,6 @@ const Routine = () => {
                             <p className="font-bold text-slate-500">অধ্যক্ষের স্বাক্ষর</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {/* Bottom Floating Action Bar */}
-            <div className="fixed bottom-6 left-0 right-0 p-4 z-50 no-print flex justify-center">
-                <div className="bg-white/90 backdrop-blur-xl border border-slate-200 px-6 py-3 rounded-2xl shadow-xl flex gap-4 w-full max-w-md">
-                    <button
-                        onClick={handlePrint}
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg active:scale-95 text-base"
-                    >
-                        <Printer size={18} />
-                        প্রিন্ট করুন
-                    </button>
-                    <button
-                        onClick={handleDownload}
-                        className="flex-1 flex items-center justify-center gap-2 bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-700 transition-all shadow-lg active:scale-95 text-base"
-                    >
-                        <Download size={18} />
-                        ডাউনলোড
-                    </button>
                 </div>
             </div>
         </div>
