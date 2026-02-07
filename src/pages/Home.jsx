@@ -5,7 +5,7 @@ import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
-import { Phone, Mail, MapPin, Send, Clock } from 'lucide-react'
+import { Phone, Mail, MapPin, Send, Clock, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Hero from '../components/Hero'
 import { useState, useEffect } from 'react'
@@ -18,15 +18,21 @@ const Home = () => {
     const [memorable, setMemorable] = useState([])
 
     useEffect(() => {
-        const unsubCommittee = onSnapshot(collection(db, 'committee'), (snap) => {
-            setCommittee(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        })
-        const unsubMemorable = onSnapshot(collection(db, 'memorable'), (snap) => {
-            setMemorable(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        })
-        return () => {
-            unsubCommittee();
-            unsubMemorable();
+        try {
+            const unsubCommittee = onSnapshot(collection(db, 'committee'), (snap) => {
+                setCommittee(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+            }, (error) => console.error("Committee Fetch Error:", error))
+
+            const unsubMemorable = onSnapshot(collection(db, 'memorable'), (snap) => {
+                setMemorable(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+            }, (error) => console.error("Memorable Fetch Error:", error))
+
+            return () => {
+                unsubCommittee();
+                unsubMemorable();
+            }
+        } catch (error) {
+            console.error("Firebase Init Error:", error)
         }
     }, [])
 
@@ -67,7 +73,7 @@ const Home = () => {
                         modules={[Autoplay, Pagination, Navigation]}
                         className="pb-16"
                     >
-                        {galleryImages.slice(0, 6).map((img, index) => (
+                        {galleryImages?.slice(0, 6).map((img, index) => (
                             <SwiperSlide key={index}>
                                 <motion.div
                                     whileHover={{ y: -10 }}
@@ -97,24 +103,13 @@ const Home = () => {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
-                        {committee.map((member, i) => (
-                            <motion.div
-                                key={member.id || i}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.1 }}
-                                viewport={{ once: true }}
-                                className="group relative bg-slate-50 p-4 md:p-8 rounded-[24px] md:rounded-[48px] text-center hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/10 transition-all duration-500 border border-transparent hover:border-slate-100"
-                            >
-                                <div className="relative inline-block mb-3 md:mb-6">
-                                    <div className="absolute inset-0 bg-indigo-500 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                                    <img src={member.imageUrl || logo} alt={member.name} className="relative w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-xl mx-auto" />
-                                </div>
-                                <h4 className="text-sm md:text-2xl font-black text-slate-900 mb-1 line-clamp-1">{member.name}</h4>
-                                <p className="text-indigo-600 font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 md:mb-4 line-clamp-1">{member.designation}</p>
-                                <p className="text-slate-500 text-xs line-clamp-2">{member.quote}</p>
-                            </motion.div>
-                        ))}
+                        {committee && committee.length > 0 ? (
+                            committee.map((member, i) => (
+                                <CommitteeCard key={member.id || i} member={member} index={i} />
+                            ))
+                        ) : (
+                            <p className="text-center col-span-full text-slate-400">তথ্য লোড হচ্ছে...</p>
+                        )}
                     </div>
                 </div>
             </section>
@@ -132,9 +127,13 @@ const Home = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-8">
-                        {memorable.map((person, i) => (
-                            <MemorialCard key={person.id || i} person={person} index={i} />
-                        ))}
+                        {memorable && memorable.length > 0 ? (
+                            memorable.map((person, i) => (
+                                <MemorialCard key={person.id || i} person={person} index={i} />
+                            ))
+                        ) : (
+                            <p className="text-center col-span-full text-slate-500 font-bold py-10">তথ্য লোড হচ্ছে...</p>
+                        )}
                     </div>
                 </div>
             </section>
@@ -254,6 +253,85 @@ const Home = () => {
     )
 }
 
+const CommitteeCard = ({ member, index }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const isLong = member.quote && member.quote.length > 60;
+
+    return (
+        <div className="relative group">
+            {/* Animated Border Gradient */}
+            <div className="absolute -inset-[2px] bg-gradient-to-r from-emerald-500 via-indigo-500 to-purple-600 rounded-[26px] md:rounded-[50px] opacity-0 group-hover:opacity-100 blur-[2px] transition-all duration-500" />
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="relative bg-white p-4 md:p-8 rounded-[24px] md:rounded-[48px] text-center shadow-lg hover:shadow-2xl transition-all duration-500 border border-slate-100 overflow-hidden flex flex-col h-full"
+            >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 via-transparent to-purple-500/0 group-hover:shadow-[inset_0_0_60px_rgba(99,102,241,0.05)] transition-all duration-500" />
+
+                <div className="relative inline-block mb-3 md:mb-6">
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500" />
+                    <img src={member.imageUrl || logo} alt={member.name} className="relative w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 border-slate-50 group-hover:border-indigo-500/20 shadow-xl mx-auto transition-colors duration-500" />
+                </div>
+
+                <h4 className="relative text-sm md:text-2xl font-black text-slate-800 mb-1 line-clamp-1 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{member.name}</h4>
+                <div className="relative inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 font-bold text-[8px] md:text-xs uppercase tracking-widest mb-3 md:mb-4 border border-emerald-100 self-center">
+                    {member.designation}
+                </div>
+
+                <div className="relative text-slate-500 text-[10px] md:text-sm font-medium leading-relaxed flex-grow">
+                    <span className="text-indigo-400 text-xl font-serif">"</span>
+                    {member.quote?.slice(0, 60)}
+                    {isLong && '...'}
+                    <span className="text-indigo-400 text-xl font-serif">"</span>
+                </div>
+
+                {isLong && (
+                    <button
+                        onClick={() => setIsOpen(true)}
+                        className="relative mt-4 px-4 py-2 bg-slate-50 hover:bg-emerald-600 text-slate-600 hover:text-white rounded-xl text-[10px] md:text-xs font-bold transition-all duration-300 border border-slate-100 hover:border-emerald-500 self-center"
+                    >
+                        বিস্তারিত পড়ুন
+                    </button>
+                )}
+            </motion.div>
+
+            {/* Modal */}
+            {isOpen && (
+                <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" onClick={() => setIsOpen(false)}>
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-3xl p-6 md:p-10 max-w-lg w-full relative overflow-hidden text-center shadow-2xl border border-white/20"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                            <X size={20} />
+                        </button>
+
+                        <div className="w-24 h-24 md:w-32 md:h-32 mx-auto rounded-full border-4 border-emerald-100 mb-4 overflow-hidden shadow-xl">
+                            <img src={member.imageUrl || logo} className="w-full h-full object-cover" />
+                        </div>
+
+                        <h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-1">{member.name}</h3>
+                        <p className="text-emerald-600 font-bold text-sm uppercase tracking-widest mb-6">{member.designation}</p>
+
+                        <div className="bg-slate-50 p-6 md:p-8 rounded-2xl relative border border-slate-100">
+                            <span className="absolute top-2 left-4 text-4xl md:text-6xl text-emerald-200 font-serif opacity-50">"</span>
+                            <p className="text-slate-600 leading-relaxed relative z-10 font-medium text-sm md:text-base">
+                                {member.quote}
+                            </p>
+                            <span className="absolute bottom-2 right-4 text-4xl md:text-6xl text-emerald-200 font-serif opacity-50">"</span>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 const MemorialCard = ({ person, index }) => {
     const [expanded, setExpanded] = useState(false);
     const isLong = person.contribution && person.contribution.length > 80;
@@ -264,21 +342,24 @@ const MemorialCard = ({ person, index }) => {
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.2 }}
             viewport={{ once: true }}
-            className="bg-white/5 backdrop-blur-xl p-4 md:p-10 rounded-[24px] md:rounded-[48px] border border-white/10 flex flex-col items-center gap-3 md:gap-6 hover:bg-white/10 transition-all group h-full"
+            className="bg-white/5 backdrop-blur-xl p-4 md:p-10 rounded-[24px] md:rounded-[48px] border border-white/10 flex flex-col items-center gap-3 md:gap-6 hover:bg-white/10 transition-all group h-full relative"
         >
+            <div className="absolute top-6 left-6 w-8 h-8 md:w-12 md:h-12 border-l border-t border-emerald-500/30 rounded-tl-xl" />
+            <div className="absolute bottom-6 right-6 w-8 h-8 md:w-12 md:h-12 border-r border-b border-indigo-500/30 rounded-br-xl" />
+
             <div className="flex items-center gap-2 md:gap-4 self-start md:self-center w-full justify-center">
-                <img src={person.imageUrl || logo} alt={person.name} className="w-16 h-16 md:w-32 md:h-32 rounded-full object-cover border-2 border-emerald-500/30 group-hover:border-emerald-500 transition-colors" />
+                <img src={person.imageUrl || logo} alt={person.name} className="w-16 h-16 md:w-32 md:h-32 rounded-full object-cover border-2 border-emerald-500/30 group-hover:border-emerald-500 transition-colors shadow-2xl" />
                 <p className="text-emerald-400 font-black text-[10px] md:text-lg">শ্রদ্ধাঞ্জলি</p>
             </div>
             <div className="text-center w-full space-y-1 md:space-y-2">
-                <h4 className="text-sm md:text-3xl font-black text-white">{person.name}</h4>
+                <h4 className="text-base md:text-3xl font-black text-white">{person.name}</h4>
                 <p className="text-rose-400 font-black text-[10px] md:text-sm uppercase tracking-widest">মৃত্যু: {person.year}</p>
-                <div className="text-slate-300 font-medium text-[10px] md:text-base leading-relaxed mt-2">
+                <div className="text-slate-300 font-medium text-[10px] md:text-base leading-relaxed mt-2 line-clamp-4 group-hover:line-clamp-none transition-all duration-500">
                     {expanded ? person.contribution : (person.contribution?.slice(0, 80) || '')}
                     {isLong && !expanded && '...'}
                 </div>
                 {isLong && (
-                    <button onClick={() => setExpanded(!expanded)} className="text-emerald-400 text-xs font-bold mt-1 hover:underline">
+                    <button onClick={() => setExpanded(!expanded)} className="text-emerald-400 text-xs font-bold mt-2 hover:underline p-2">
                         {expanded ? 'সংক্ষিপ্ত করুন' : 'বিস্তারিত পড়ুন'}
                     </button>
                 )}

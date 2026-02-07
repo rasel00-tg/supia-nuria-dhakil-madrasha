@@ -24,7 +24,7 @@ import Preloader from '../../components/Preloader';
 // --- Utility: Image Compression (Using browser-image-compression) ---
 const compressImage = async (file) => {
     const options = {
-        maxSizeMB: 0.2, // Target 200KB (approx)
+        maxSizeMB: 0.15, // Target 100-150KB
         maxWidthOrHeight: 1200,
         useWebWorker: true,
         fileType: 'image/webp'
@@ -507,7 +507,11 @@ const AdminDashboard = () => {
             return;
         }
 
-        setLoadingMessage(`আপনার (${typeBn}) এড হচ্ছে, দয়া করে অপেক্ষা করুন....`);
+        if (type === 'committee') {
+            setLoadingMessage('আপনার পরিচালনা কমিটির সদস্য এড হচ্ছে, দয়া করে অপেক্ষা করুন....');
+        } else {
+            setLoadingMessage(`আপনার (${typeBn}) এড হচ্ছে, দয়া করে অপেক্ষা করুন....`);
+        }
         setLoading(true);
 
         try {
@@ -1368,7 +1372,23 @@ const AdminDashboard = () => {
                         <form onSubmit={(e) => { e.preventDefault(); handleAdd('achievements', formData, true, 'achievements'); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
                             <Input placeholder="সাফল্যের শিরোনাম" onChange={e => setFormData({ ...formData, title: e.target.value })} required />
                             <textarea placeholder="বিস্তারিত বর্ণনা..." onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-20" required />
-                            <input type="file" onChange={e => setFile(e.target.files[0])} className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400" />
+                            <input
+                                type="file"
+                                onChange={async e => {
+                                    if (e.target.files[0]) {
+                                        const rawFile = e.target.files[0];
+                                        try {
+                                            const compressed = await compressImage(rawFile);
+                                            setFile(compressed);
+                                        } catch (err) {
+                                            console.error("Compression Error:", err);
+                                            setFile(rawFile);
+                                        }
+                                    }
+                                }}
+                                className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                accept="image/*"
+                            />
                             <button disabled={loading} className="w-full bg-indigo-600 py-2 rounded-xl font-bold">{loading ? 'যুক্ত হচ্ছে...' : '+ সাফল্য যুক্ত করুন'}</button>
                         </form>
                         <div className="grid md:grid-cols-3 gap-4">
@@ -1410,7 +1430,23 @@ const AdminDashboard = () => {
 
                             <div className="md:col-span-2">
                                 <label className="text-xs text-slate-500 font-bold mb-1 block">ছবি আপলোড (WebP, Max 200KB)</label>
-                                <input type="file" onChange={e => setFile(e.target.files[0])} className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400" accept="image/*" />
+                                <input
+                                    type="file"
+                                    onChange={async e => {
+                                        if (e.target.files[0]) {
+                                            const rawFile = e.target.files[0];
+                                            try {
+                                                const compressed = await compressImage(rawFile);
+                                                setFile(compressed);
+                                            } catch (err) {
+                                                console.error("Compression Error:", err);
+                                                setFile(rawFile);
+                                            }
+                                        }
+                                    }}
+                                    className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                    accept="image/*"
+                                />
                             </div>
                             <button disabled={loading} className="md:col-span-2 bg-indigo-600 py-2 rounded-lg font-bold">{loading ? 'যুক্ত হচ্ছে...' : '+ সদস্য যুক্ত করুন'}</button>
                         </form>
@@ -1487,7 +1523,23 @@ const AdminDashboard = () => {
                         <form onSubmit={(e) => { e.preventDefault(); handleAdd('events', formData, true, 'events'); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
                             <Input placeholder="ইভেন্টের নাম" onChange={e => setFormData({ ...formData, title: e.target.value })} required />
                             <Input placeholder="তারিখ" type="date" onChange={e => setFormData({ ...formData, date: e.target.value })} required />
-                            <input type="file" onChange={e => setFile(e.target.files[0])} className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400" />
+                            <input
+                                type="file"
+                                onChange={async e => {
+                                    if (e.target.files[0]) {
+                                        const rawFile = e.target.files[0];
+                                        try {
+                                            const compressed = await compressImage(rawFile);
+                                            setFile(compressed);
+                                        } catch (err) {
+                                            console.error("Compression Error:", err);
+                                            setFile(rawFile);
+                                        }
+                                    }
+                                }}
+                                className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                accept="image/*"
+                            />
                             <button disabled={loading} className="w-full bg-indigo-600 py-2 rounded-xl font-bold">{loading ? 'যুক্ত হচ্ছে...' : '+ ইভেন্ট যুক্ত করুন'}</button>
                         </form>
                         <div className="space-y-2">

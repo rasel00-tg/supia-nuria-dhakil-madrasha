@@ -31,7 +31,7 @@ const TeachersList = () => {
     if (loading) return <Preloader />
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 py-20 pb-40 font-bengali">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50 py-12 md:py-20 pb-40 font-bengali overflow-x-hidden">
             {/* Decorative Background Blobs */}
             <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
             <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
@@ -79,57 +79,57 @@ const TeachersList = () => {
                     </motion.p>
                 </div>
 
-                {/* 2 & 3. Teachers Grid (Mobile 2 cols, Laptop 3-4 cols) */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 gap-y-8 md:gap-y-12">
-                    {teachers.map((teacher, i) => (
-                        <motion.div
-                            key={teacher.id || i}
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.05 }}
-                            whileHover={{ y: -10, scale: 1.02 }}
-                            className="bg-white/70 backdrop-blur-md rounded-3xl shadow-lg border border-white/50 overflow-hidden flex flex-col group hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300"
-                        >
-                            {/* Proflie Image */}
-                            <div className="relative aspect-square overflow-hidden bg-slate-100 m-2 rounded-2xl">
-                                <img
-                                    src={teacher.imageUrl || logo}
-                                    alt={teacher.full_name}
-                                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                            </div>
-
-                            {/* Info */}
-                            <div className="p-4 pt-2 text-center space-y-1 flex-grow flex flex-col justify-center">
-                                <h3 className="text-sm md:text-xl font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors" title={teacher.full_name}>
-                                    {teacher.full_name}
-                                </h3>
-                                <p className="text-[10px] md:text-xs font-bold text-emerald-600 uppercase tracking-widest line-clamp-1 bg-emerald-50 py-1 px-2 rounded-full mx-auto inline-block border border-emerald-100">
-                                    {teacher.designation || 'সহকারী শিক্ষক'}
-                                </p>
-                                {teacher.email && (
-                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium break-all pt-1 opacity-80">
-                                        {teacher.email}
-                                    </p>
-                                )}
-                            </div>
-                        </motion.div>
-                    ))}
+                {/* 2. Teachers Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                    {teachers && teachers.length > 0 ? (
+                        teachers.map((teacher, i) => (
+                            <TeacherCard key={teacher.id || i} teacher={teacher} index={i} />
+                        ))
+                    ) : (
+                        <div className="col-span-full py-20 text-center bg-white/50 rounded-3xl border border-dashed border-slate-200 backdrop-blur-sm">
+                            <p className="text-slate-400 font-bold">কোনো শিক্ষকের তথ্য পাওয়া যায়নি।</p>
+                        </div>
+                    )}
                 </div>
-
-                {teachers.length === 0 && (
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="text-center text-slate-400 py-20 font-bold bg-white/50 rounded-3xl border border-white/50 backdrop-blur-sm"
-                    >
-                        কোনো শিক্ষকের তথ্য পাওয়া যায়নি।
-                    </motion.div>
-                )}
             </div>
         </div>
     )
 }
 
-export default TeachersList
+const TeacherCard = ({ teacher, index }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.05 }}
+        whileHover={{ y: -10, scale: 1.02 }}
+        className="bg-white/70 backdrop-blur-md rounded-3xl shadow-lg border border-white/50 overflow-hidden flex flex-col group hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300"
+    >
+        {/* Profile Image */}
+        <div className="relative aspect-square overflow-hidden bg-slate-100 m-2 rounded-2xl">
+            <img
+                src={teacher.imageUrl || teacher.photoURL || logo}
+                alt={teacher.full_name}
+                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
+
+        {/* Info */}
+        <div className="p-5 pt-2 text-center space-y-2 flex-grow flex flex-col justify-center">
+            <h3 className="text-lg md:text-xl font-black text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors" title={teacher.full_name}>
+                {teacher.full_name}
+            </h3>
+            <p className="text-[10px] md:text-xs font-bold text-emerald-600 uppercase tracking-widest line-clamp-1 bg-emerald-50 py-1.5 px-3 rounded-full mx-auto inline-block border border-emerald-100 italic">
+                {teacher.designation || 'সহকারী শিক্ষক'}
+            </p>
+            {teacher.email && (
+                <p className="text-[10px] md:text-xs text-slate-400 font-medium break-all pt-1 opacity-80">
+                    {teacher.email}
+                </p>
+            )}
+        </div>
+    </motion.div>
+)
+
+export default TeachersList;
