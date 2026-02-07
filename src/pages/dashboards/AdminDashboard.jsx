@@ -329,6 +329,7 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard')
     const [showSidebar, setShowSidebar] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [loadingMessage, setLoadingMessage] = useState('') // New State for Dynamic Loading Message
     const [uploadProgress, setUploadProgress] = useState(0) // New State for Upload Progress
     const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success' })
 
@@ -359,6 +360,7 @@ const AdminDashboard = () => {
     // Active Forms State
     const [formData, setFormData] = useState({})
     const [file, setFile] = useState(null)
+    const [previewImage, setPreviewImage] = useState(null) // New State for Image Preview
 
     // Real-time Listeners
     useEffect(() => {
@@ -441,6 +443,7 @@ const AdminDashboard = () => {
     }
 
     const handleAdd = async (collectionName, data, hasImage = false, imagePath = '') => {
+        setLoadingMessage('তথ্য সেভ হচ্ছে...');
         setLoading(true)
         try {
             let imageUrl = null;
@@ -455,23 +458,30 @@ const AdminDashboard = () => {
             setPopup({ isOpen: true, title: 'সফল!', message: 'সফলভাবে যুক্ত করা হয়েছে।', type: 'success' })
             setFormData({})
             setFile(null)
+            setPreviewImage(null)
             fetchAdditionalData()
         } catch (error) {
             console.error(error)
             setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'কোনো সমস্যা হয়েছে। আবার চেষ্টা করুন।', type: 'error' })
         } finally {
             setLoading(false)
+            setLoadingMessage('')
         }
     }
 
     const handleDelete = async (collectionName, id) => {
         if (!window.confirm('আপনি কি নিশ্চিত এটি মুছে ফেলতে চান?')) return;
+        setLoadingMessage('মুছে ফেলা হচ্ছে...');
+        setLoading(true);
         try {
             await deleteDoc(doc(db, collectionName, id))
             setPopup({ isOpen: true, title: 'মুছে ফেলা হয়েছে', message: 'আইটেমটি সফলভাবে রিমুভ হয়েছে।', type: 'success' })
             fetchAdditionalData()
         } catch (error) {
             setPopup({ isOpen: true, title: 'সমস্যা!', message: 'মুছে ফেলা সম্ভব হয়নি।', type: 'error' })
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
         }
     }
 
@@ -489,6 +499,11 @@ const AdminDashboard = () => {
             return;
         }
 
+        if (file) {
+            setLoadingMessage('আপনার ছবি আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...');
+        } else {
+            setLoadingMessage('শিক্ষক এড হচ্ছে, দয়া করে অপেক্ষা করুন...');
+        }
         setLoading(true)
         // Reset progress explicitly
         setUploadProgress(0);
@@ -527,6 +542,7 @@ const AdminDashboard = () => {
             })
             setFormData({})
             setFile(null)
+            setPreviewImage(null)
 
             // Safe DOM manipulation
             const fileInput = document.getElementById('teacher-file-input');
@@ -540,6 +556,7 @@ const AdminDashboard = () => {
             // STRICTLY ENSURE LOADING STOPS
             setLoading(false)
             setUploadProgress(0)
+            setLoadingMessage('')
         }
     }
 
@@ -552,6 +569,7 @@ const AdminDashboard = () => {
             return;
         }
 
+        setLoadingMessage('রুটিন পাবলিশ হচ্ছে...');
         setLoading(true);
         try {
             const routineItem = {
@@ -586,6 +604,7 @@ const AdminDashboard = () => {
             setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'রুটিন আপডেট করা যায়নি।', type: 'error' });
         } finally {
             setLoading(false);
+            setLoadingMessage('');
         }
     }
 
@@ -649,6 +668,7 @@ const AdminDashboard = () => {
             return
         }
 
+        setLoadingMessage('শিক্ষার্থী ভর্তি সম্পন্ন হচ্ছে...');
         setLoading(true)
         try {
             // 1. Create User in Firebase Auth using Secondary App (to avoid Admin logout)
@@ -712,6 +732,7 @@ const AdminDashboard = () => {
             setPopup({ isOpen: true, title: 'ত্রুটি', message: 'শিক্ষার্থী ভর্তি সম্পন্ন করা যায়নি।', type: 'error' })
         } finally {
             setLoading(false)
+            setLoadingMessage('')
         }
     }
 
@@ -727,6 +748,7 @@ const AdminDashboard = () => {
     }
 
     const confirmPasswordReset = async (uid, newPassword) => {
+        setLoadingMessage('পাসওয়ার্ড আপডেট হচ্ছে...');
         setLoading(true)
         try {
             // 1. Update in Firebase Auth (using a secondary app if admin is logged in, but updatePassword requires sign-in of THAT user).
@@ -801,6 +823,7 @@ const AdminDashboard = () => {
             toast.error('Error updating password');
         } finally {
             setLoading(false);
+            setLoadingMessage('');
         }
     }
 
@@ -817,7 +840,7 @@ const AdminDashboard = () => {
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100 font-bengali flex overflow-hidden selection:bg-indigo-500/30">
             {/* Branded Loading Screen */}
-            {loading && <Preloader progress={uploadProgress > 0 ? uploadProgress : undefined} />}
+            {loading && <Preloader progress={uploadProgress > 0 ? uploadProgress : undefined} message={loadingMessage} />}
 
             <Popup isOpen={popup.isOpen} title={popup.title} message={popup.message} type={popup.type} onClose={() => setPopup({ ...popup, isOpen: false })} />
 
@@ -1064,13 +1087,29 @@ const AdminDashboard = () => {
                             <form onSubmit={(e) => { e.preventDefault(); handleAddTeacher(); }} className="grid md:grid-cols-2 gap-4">
                                 <div className="space-y-1 md:col-span-2">
                                     <label className="text-xs font-bold text-slate-500">প্রোফাইল ছবি (বাধ্যতামূলক)</label>
+
+                                    {previewImage && (
+                                        <div className="w-24 h-24 mb-4 rounded-full overflow-hidden border-2 border-indigo-500/50 p-1 relative group">
+                                            <img src={previewImage} alt="Preview" className="w-full h-full object-cover rounded-full" />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setFile(null); setPreviewImage(null); const fileInput = document.getElementById('teacher-file-input'); if (fileInput) fileInput.value = ''; }}
+                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white rounded-full"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+                                    )}
+
                                     <input
                                         type="file"
                                         id="teacher-file-input"
                                         accept="image/*"
                                         onChange={e => {
                                             if (e.target.files[0]) {
-                                                setFile(e.target.files[0]);
+                                                const file = e.target.files[0];
+                                                setFile(file);
+                                                setPreviewImage(URL.createObjectURL(file));
                                             }
                                         }}
                                         className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400 border border-white/10"
