@@ -3,9 +3,9 @@ import { db, auth, storage } from '../../firebase'
 import { initializeApp } from "firebase/app"
 import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth"
 import {
-    collection, query, where, getDocs, updateDoc, doc, deleteDoc, addDoc, serverTimestamp, orderBy, getDoc, setDoc, onSnapshot, limit
+    collection, query, where, getDocs, updateDoc, doc, deleteDoc, addDoc, serverTimestamp, orderBy, getDoc, setDoc, onSnapshot, limit, arrayUnion
 } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage'
 import { sendPasswordResetEmail, signOut as firebaseSignOut } from 'firebase/auth'
 import {
     Users, Bell, CheckCircle, XCircle, LayoutDashboard, Megaphone,
@@ -18,43 +18,25 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import logo from '../../assets/logo.png'
 import app from '../../firebase' // Import app for config
+import imageCompression from 'browser-image-compression';
+import Preloader from '../../components/Preloader';
 
-// --- Utility: Image Compression (Native Canvas) ---
+// --- Utility: Image Compression (Using browser-image-compression) ---
 const compressImage = async (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1000;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                canvas.toBlob((blob) => {
-                    resolve(new File([blob], file.name, {
-                        type: 'image/jpeg',
-                        lastModified: Date.now()
-                    }));
-                }, 'image/jpeg', 0.7); // 70% Quality
-            }
-            img.onerror = (err) => reject(err);
-        }
-        reader.onerror = (err) => reject(err);
-    })
+    const options = {
+        maxSizeMB: 0.2, // Target 200KB (approx)
+        maxWidthOrHeight: 1200,
+        useWebWorker: true
+    }
+    try {
+        const compressedFile = await imageCompression(file, options);
+        return compressedFile;
+    } catch (error) {
+        console.error('Compression Error:', error);
+        return file; // Fallback to original if compression fails
+    }
 }
+
 
 // --- Custom Popup Component ---
 const Popup = ({ isOpen, title, message, type = 'success', onClose }) => {
@@ -347,6 +329,7 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard')
     const [showSidebar, setShowSidebar] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [uploadProgress, setUploadProgress] = useState(0) // New State for Upload Progress
     const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success' })
 
     // Action Modal States
@@ -432,10 +415,29 @@ const AdminDashboard = () => {
 
     const handleUpload = async (file, path) => {
         if (!file) return null;
+        setUploadProgress(1); // Start progress
         const compressedFile = await compressImage(file);
+
         const storageRef = ref(storage, `${path}/${Date.now()}_${compressedFile.name}`);
-        await uploadBytes(storageRef, compressedFile);
-        return await getDownloadURL(storageRef);
+        const uploadTask = uploadBytesResumable(storageRef, compressedFile);
+
+        return new Promise((resolve, reject) => {
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadProgress(progress);
+                },
+                (error) => {
+                    console.error('Upload Error:', error);
+                    reject(error);
+                },
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    setUploadProgress(0); // Reset after done
+                    resolve(downloadURL);
+                }
+            );
+        });
     }
 
     const handleAdd = async (collectionName, data, hasImage = false, imagePath = '') => {
@@ -443,7 +445,7 @@ const AdminDashboard = () => {
         try {
             let imageUrl = null;
             if (hasImage && file) {
-                imageUrl = await handleUpload(file, imagePath);
+                imageUrl = await handleUpload(file, collectionName); // Corrected path to use collectionName
             }
             await addDoc(collection(db, collectionName), {
                 ...data,
@@ -486,21 +488,34 @@ const AdminDashboard = () => {
             toast.error('মোবাইল নাম্বার অবশ্যই ১১ ডিজিটের হতে হবে');
             return;
         }
-        if (experience && (experience.length < 100 || experience.length > 500)) {
-            toast.error('অভিজ্ঞতার বিবরণ ১০০-৫০০ অক্ষরের মধ্যে হতে হবে');
-            return;
-        }
 
         setLoading(true)
+        // Reset progress explicitly
+        setUploadProgress(0);
+
         try {
             let imageUrl = null;
+            // STRICT FILE HANDLING
             if (file) {
-                imageUrl = await handleUpload(file, 'teachers'); // Upload compressed image
+                if (file.size > 5 * 1024 * 1024) {
+                    toast("বড় ইমেজ ফাইল কম্প্রেস করা হচ্ছে, একটু অপেক্ষা করুন...", { icon: '⏳' });
+                }
+
+                // Wrap upload in a sub-try/catch to prevent freezing if upload fails
+                try {
+                    imageUrl = await handleUpload(file, 'teachers');
+                } catch (uploadError) {
+                    console.error("Image Upload Failed:", uploadError);
+                    toast.error("ছবি আপলোড ব্যর্থ হয়েছে, তবে ডাটা সেভ করার চেষ্টা করা হচ্ছে।");
+                    // We proceed without image or abort? User said "Catch error... and stop loading".
+                    // Better to throw to stop process if image is critical, but requirement says "Show popup and stop loading".
+                    throw new Error("ইমেজ আপলোডে সমস্যা হয়েছে। ইন্টারনেট কানেকশন চেক করুন।");
+                }
             }
 
             await addDoc(collection(db, 'teachers'), {
                 ...formData,
-                imageUrl,
+                imageUrl: imageUrl || null,
                 createdAt: serverTimestamp()
             })
 
@@ -512,12 +527,65 @@ const AdminDashboard = () => {
             })
             setFormData({})
             setFile(null)
+
+            // Safe DOM manipulation
+            const fileInput = document.getElementById('teacher-file-input');
+            if (fileInput) fileInput.value = '';
+
             fetchAdditionalData()
         } catch (error) {
             console.error(error)
-            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'শিক্ষক যুক্ত করা সম্ভব হয়নি।', type: 'error' })
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: `ত্রুটি: ${error.message || 'শিক্ষক যুক্ত করা সম্ভব হয়নি।'}`, type: 'error' })
         } finally {
+            // STRICTLY ENSURE LOADING STOPS
             setLoading(false)
+            setUploadProgress(0)
+        }
+    }
+
+    // -- ROUTINE ADD LOGIC (NEW) --
+    const handleAddRoutine = async () => {
+        const { date, day, subject, time, code, instructions, class: className } = formData;
+
+        if (!date || !day || !subject || !time || !className) {
+            toast.error('রুটিনের সব তথ্য পূরণ করা আবশ্যক!');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const routineItem = {
+                date, // Date Picker formatted value
+                day,
+                subject,
+                time,
+                code: code || '',
+                class: className
+            };
+
+            const docRef = doc(db, 'settings', 'exam_routine');
+
+            // We use arrayUnion to append to the list
+            // Also update 'rules' if instructions are provided
+            const updateData = {
+                routine: arrayUnion(routineItem)
+            };
+
+            if (instructions) {
+                // Split instructions by newline to make an array
+                const rulesArray = instructions.split('\n').filter(r => r.trim() !== '');
+                updateData.rules = rulesArray;
+            }
+
+            await setDoc(docRef, updateData, { merge: true });
+
+            setPopup({ isOpen: true, title: 'সফল!', message: 'রুটিন সফলভাবে আপডেট হয়েছে।', type: 'success' });
+            setFormData({ ...formData, subject: '', code: '', time: '' }); // Keep date/day/class for easier entry
+        } catch (error) {
+            console.error("Routine Error:", error);
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'রুটিন আপডেট করা যায়নি।', type: 'error' });
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -748,6 +816,9 @@ const AdminDashboard = () => {
 
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100 font-bengali flex overflow-hidden selection:bg-indigo-500/30">
+            {/* Branded Loading Screen */}
+            {loading && <Preloader progress={uploadProgress > 0 ? uploadProgress : undefined} />}
+
             <Popup isOpen={popup.isOpen} title={popup.title} message={popup.message} type={popup.type} onClose={() => setPopup({ ...popup, isOpen: false })} />
 
             {/* Detail View Modal */}
@@ -993,7 +1064,18 @@ const AdminDashboard = () => {
                             <form onSubmit={(e) => { e.preventDefault(); handleAddTeacher(); }} className="grid md:grid-cols-2 gap-4">
                                 <div className="space-y-1 md:col-span-2">
                                     <label className="text-xs font-bold text-slate-500">প্রোফাইল ছবি (বাধ্যতামূলক)</label>
-                                    <input type="file" onChange={e => setFile(e.target.files[0])} className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400 border border-white/10" required />
+                                    <input
+                                        type="file"
+                                        id="teacher-file-input"
+                                        accept="image/*"
+                                        onChange={e => {
+                                            if (e.target.files[0]) {
+                                                setFile(e.target.files[0]);
+                                            }
+                                        }}
+                                        className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400 border border-white/10"
+                                        required
+                                    />
                                 </div>
 
                                 <Input placeholder="পূর্ণ নাম *" value={formData.full_name || ''} onChange={e => setFormData({ ...formData, full_name: e.target.value })} required />
@@ -1075,29 +1157,87 @@ const AdminDashboard = () => {
 
                 {/* --- 7. Routine Publish --- */}
                 {activeTab === 'routine' && (
-                    <Section title="পরীক্ষার রুটিন আপলোড">
-                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('routines', formData, true, 'routines'); }} className="mb-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                    <Section title="পরীক্ষার রুটিন আপলোড (New Logic)">
+                        <form onSubmit={(e) => { e.preventDefault(); handleAddRoutine(); }} className="mb-6 bg-white/5 p-6 rounded-2xl border border-white/10">
+                            <h4 className="text-indigo-300 font-bold mb-4 border-b border-white/5 pb-2">নতুন পরীক্ষা বা রুটিন যুক্ত করুন</h4>
                             <div className="grid md:grid-cols-2 gap-4">
-                                <Input placeholder="পরীক্ষার নাম (যেমন: বার্ষিক পরীক্ষা ২০২৬)" onChange={e => setFormData({ ...formData, exam_name: e.target.value })} required />
-                                <select onChange={e => setFormData({ ...formData, class: e.target.value })} className="bg-slate-800 border border-white/10 rounded-xl p-3 text-white">
-                                    <option>সকল শ্রেণি</option>
-                                    {['১ম', '২য়', '৩য়', '৪র্থ', '৫ম', '৬ষ্ঠ', '৭ম', '৮ম', '৯ম', '১০ম'].map(c => <option key={c} value={c + ' শ্রেণি'}>{c} শ্রেণি</option>)}
-                                </select>
-                                <div className="md:col-span-2">
-                                    <label className="block mb-2 text-sm text-slate-400">রুটিন ইমেজ আপলোড (JPG/PNG)</label>
-                                    <input type="file" onChange={e => setFile(e.target.files[0])} required className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400" />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">তারিখ (Date Picker)</label>
+                                    <Input
+                                        type="date"
+                                        value={formData.date || ''}
+                                        onChange={e => setFormData({ ...formData, date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">বার (Day)</label>
+                                    <select
+                                        value={formData.day || ''}
+                                        onChange={e => setFormData({ ...formData, day: e.target.value })}
+                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white"
+                                        required
+                                    >
+                                        <option value="">নির্বাচন করুন</option>
+                                        {['শনিবার', 'রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার'].map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">বিষয় (Subject)</label>
+                                    <Input
+                                        placeholder="বিষয়ের নাম"
+                                        value={formData.subject || ''}
+                                        onChange={e => setFormData({ ...formData, subject: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">সময় (Time)</label>
+                                    <Input
+                                        placeholder="যেমন: সকাল ১০:০০ - দুপুর ১:০০"
+                                        value={formData.time || ''}
+                                        onChange={e => setFormData({ ...formData, time: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">বিষয় কোড (Subject Code)</label>
+                                    <Input
+                                        placeholder="কোড"
+                                        value={formData.code || ''}
+                                        onChange={e => setFormData({ ...formData, code: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">শ্রেণি (Class)</label>
+                                    <select
+                                        value={formData.class || ''}
+                                        onChange={e => setFormData({ ...formData, class: e.target.value })}
+                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white"
+                                        required
+                                    >
+                                        <option value="">ক্লাস নির্বাচন করুন</option>
+                                        {['১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি', '৪র্থ শ্রেণি', '৫ম শ্রেণি', '৬ষ্ঠ শ্রেণি', '৭ম শ্রেণি', '৮ম শ্রেণি', '৯ম শ্রেণি', '১০ম শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="md:col-span-2 space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">পরীক্ষার্থীদের জন্য নির্দেশনা (Instructions/Rules)</label>
+                                    <textarea
+                                        placeholder="প্রতিটি নিয়ম নতুন লাইনে লিখুন..."
+                                        value={formData.instructions || ''}
+                                        onChange={e => setFormData({ ...formData, instructions: e.target.value })}
+                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white h-24 focus:outline-none focus:border-indigo-500"
+                                    />
+                                    <p className="text-[10px] text-slate-500">নোট: নির্দেশনাগুলো প্রিন্ট করার সময় রুটিনের নিচে থাকবে।</p>
                                 </div>
                             </div>
-                            <button disabled={loading} className="mt-4 w-full bg-indigo-600 py-3 rounded-xl font-bold">{loading ? 'আপলোড হচ্ছে...' : 'রুটিন আপলোড করুন'}</button>
+                            <button disabled={loading} className="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20">{loading ? 'আপডেট হচ্ছে...' : 'রুটিন ও নিয়ম আপডেট করুন'}</button>
                         </form>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            {routines.map(r => (
-                                <div key={r.id} className="p-4 bg-white/5 rounded-xl border border-white/10">
-                                    <h5 className="font-bold mb-2">{r.exam_name} ({r.class})</h5>
-                                    <img src={r.imageUrl} className="w-full h-32 object-cover rounded-lg mb-2 opacity-70 hover:opacity-100 transition-opacity" />
-                                    <button onClick={() => handleDelete('routines', r.id)} className="w-full py-1 bg-rose-500/20 text-rose-500 rounded text-sm font-bold">Delete</button>
-                                </div>
-                            ))}
+
+                        {/* List of routines? Currently fetched from 'routines' collection, but we are now using 'settings/exam_routine' */}
+                        <div className="bg-rose-500/10 p-4 rounded-xl border border-rose-500/20 text-rose-300 text-sm">
+                            <p>নোট: রুটিন রিয়েল-টাইমে আপডেট হবে। পুরনো রুটিন মুছে ফেলতে চাইলে ডাটাবেস অ্যাডমিনের সাহায্য নিন অথবা পরবর্তী আপডেটে ডিলিট ফিচার আসবে।</p>
                         </div>
                     </Section>
                 )}

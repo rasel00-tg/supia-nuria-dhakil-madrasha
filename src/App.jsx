@@ -41,6 +41,19 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
         location.pathname.startsWith('/admin')
     const isLoginPage = location.pathname === '/login'
 
+    // Page Transition Loader Logic
+    const [isPageLoading, setIsPageLoading] = useState(false);
+
+    useEffect(() => {
+        setIsPageLoading(true);
+        const timer = setTimeout(() => {
+            setIsPageLoading(false);
+        }, 1000); // 1 second branding display
+        return () => clearTimeout(timer);
+    }, [location.pathname]);
+
+    const showLoader = loading || isPageLoading;
+
     const getDashboardRoute = () => {
         if (!role) return '/login'
         if (role === 'teacher') return '/teacher'
@@ -51,7 +64,7 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
     return (
         <div className="relative min-h-screen flex flex-col">
             <ScrollToTop />
-            {loading && <Preloader />}
+            {showLoader && <Preloader />}
             <Toaster position="top-right" />
 
             {/* Sidebar only for non-dashboard pages and not login, managing layout manually for dashboard if needed */}

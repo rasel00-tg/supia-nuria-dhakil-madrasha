@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { Printer, Download, Calendar, ChevronDown, Check } from 'lucide-react'
 import html2canvas from 'html2canvas'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase'
 import logo from '../assets/logo.png'
 import BackButton from '../components/BackButton'
@@ -32,21 +32,19 @@ const Routine = () => {
     ]
 
     useEffect(() => {
-        const fetchRoutine = async () => {
-            try {
-                const docRef = doc(db, 'settings', 'exam_routine')
-                const docSnap = await getDoc(docRef)
-
-                if (docSnap.exists()) {
-                    setExamData(docSnap.data())
-                }
-            } catch (error) {
-                console.error("Error fetching routine:", error)
-            } finally {
-                setLoading(false)
+        setLoading(true)
+        const docRef = doc(db, 'settings', 'exam_routine')
+        const unsubscribe = onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setExamData(docSnap.data())
             }
-        }
-        fetchRoutine()
+            setLoading(false)
+        }, (error) => {
+            console.error("Error fetching routine:", error)
+            setLoading(false)
+        })
+
+        return () => unsubscribe()
     }, [])
 
     useEffect(() => {
