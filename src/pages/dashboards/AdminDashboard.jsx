@@ -26,7 +26,8 @@ const compressImage = async (file) => {
     const options = {
         maxSizeMB: 0.2, // Target 200KB (approx)
         maxWidthOrHeight: 1200,
-        useWebWorker: true
+        useWebWorker: true,
+        fileType: 'image/webp'
     }
     try {
         const compressedFile = await imageCompression(file, options);
@@ -485,6 +486,28 @@ const AdminDashboard = () => {
         }
     }
 
+    // --- ImgBB Upload Helper ---
+    const uploadToImgBB = async (file) => {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        // Using provided API Key
+        const API_KEY = 'E22c8bb3aff47463d2a22e38293bac01';
+        const url = `https://api.imgbb.com/1/upload?key=${API_KEY}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            return data.data.url;
+        } else {
+            throw new Error(data.error?.message || 'ImgBB Upload Failed');
+        }
+    }
+
     // -- TEACHER ADD LOGIC --
     const handleAddTeacher = async () => {
         const { full_name, designation, mobile, email, dob, present_address, permanent_address, education, nid, experience } = formData;
@@ -499,61 +522,58 @@ const AdminDashboard = () => {
             return;
         }
 
-        if (file) {
-            setLoadingMessage('আপনার ছবি আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...');
-        } else {
-            setLoadingMessage('শিক্ষক এড হচ্ছে, দয়া করে অপেক্ষা করুন...');
-        }
+        // Dynamic Loading Message
+        setLoadingMessage('আপনার শিক্ষক এড হচ্ছে, দয়া করে অপেক্ষা করুন....');
         setLoading(true)
-        // Reset progress explicitly
         setUploadProgress(0);
 
         try {
-            let imageUrl = null;
-            // STRICT FILE HANDLING
-            if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    toast("বড় ইমেজ ফাইল কম্প্রেস করা হচ্ছে, একটু অপেক্ষা করুন...", { icon: '⏳' });
-                }
+            let photoURL = null;
 
-                // Wrap upload in a sub-try/catch to prevent freezing if upload fails
+            // Image Upload with Check
+            if (file) {
                 try {
-                    imageUrl = await handleUpload(file, 'teachers');
+                    // Note: File is already compressed on selection
+                    // Use ImgBB instead of Firebase Storage
+                    photoURL = await uploadToImgBB(file);
                 } catch (uploadError) {
                     console.error("Image Upload Failed:", uploadError);
-                    toast.error("ছবি আপলোড ব্যর্থ হয়েছে, তবে ডাটা সেভ করার চেষ্টা করা হচ্ছে।");
-                    // We proceed without image or abort? User said "Catch error... and stop loading".
-                    // Better to throw to stop process if image is critical, but requirement says "Show popup and stop loading".
-                    throw new Error("ইমেজ আপলোডে সমস্যা হয়েছে। ইন্টারনেট কানেকশন চেক করুন।");
+                    throw new Error("ছবি আপলোড ব্যর্থ হয়েছে। ImgBB তে সমস্যা বা API Key চেক করুন।");
                 }
             }
 
+            // Save Data (Firestore creates collection automatically if missing)
+            // Saving as 'photoURL' as requested, keeping 'imageUrl' for legacy support if needed
             await addDoc(collection(db, 'teachers'), {
                 ...formData,
-                imageUrl: imageUrl || null,
+                photoURL: photoURL || null,
+                imageUrl: photoURL || null,
                 createdAt: serverTimestamp()
             })
 
             setPopup({
                 isOpen: true,
                 title: 'সফল!',
-                message: `প্রিয় এডমিন, ${full_name}-এর তথ্য সফলভাবে সংরক্ষিত হয়েছে।`,
+                message: 'আপনার শিক্ষক এড করা সফলভাবে সম্পন্ন হয়েছে।',
                 type: 'success'
             })
+
+            // Reset State
             setFormData({})
             setFile(null)
             setPreviewImage(null)
-
-            // Safe DOM manipulation
             const fileInput = document.getElementById('teacher-file-input');
             if (fileInput) fileInput.value = '';
 
             fetchAdditionalData()
         } catch (error) {
             console.error(error)
-            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: `ত্রুটি: ${error.message || 'শিক্ষক যুক্ত করা সম্ভব হয়নি।'}`, type: 'error' })
+            let errorMsg = error.message;
+            if (error.code === 'permission-denied') {
+                errorMsg = "ডাটাবেসে সেভ করার অনুমতি নেই (Permission Denied)।";
+            }
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: `ত্রুটি: ${errorMsg || 'শিক্ষক যুক্ত করা সম্ভব হয়নি।'}`, type: 'error' })
         } finally {
-            // STRICTLY ENSURE LOADING STOPS
             setLoading(false)
             setUploadProgress(0)
             setLoadingMessage('')
@@ -1105,11 +1125,18 @@ const AdminDashboard = () => {
                                         type="file"
                                         id="teacher-file-input"
                                         accept="image/*"
-                                        onChange={e => {
+                                        onChange={async e => {
                                             if (e.target.files[0]) {
-                                                const file = e.target.files[0];
-                                                setFile(file);
-                                                setPreviewImage(URL.createObjectURL(file));
+                                                const rawFile = e.target.files[0];
+                                                try {
+                                                    const compressed = await compressImage(rawFile);
+                                                    setFile(compressed);
+                                                    setPreviewImage(URL.createObjectURL(compressed));
+                                                } catch (err) {
+                                                    console.error("Compression Error:", err);
+                                                    setFile(rawFile);
+                                                    setPreviewImage(URL.createObjectURL(rawFile));
+                                                }
                                             }
                                         }}
                                         className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400 border border-white/10"
@@ -1150,7 +1177,7 @@ const AdminDashboard = () => {
                             {teachers.map(t => (
                                 <div key={t.id} className="p-5 bg-white/5 rounded-2xl border border-white/5 text-center relative group hover:bg-white/10 transition-colors">
                                     <div className="w-24 h-24 mx-auto rounded-full p-1 border-2 border-indigo-500/30 mb-3 overflow-hidden">
-                                        <img src={t.imageUrl || logo} className="w-full h-full object-cover rounded-full" />
+                                        <img src={t.photoURL || t.imageUrl || logo} className="w-full h-full object-cover rounded-full" />
                                     </div>
                                     <h5 className="font-bold text-white text-base mb-1">{t.full_name}</h5>
                                     <p className="text-xs text-indigo-300 font-bold uppercase tracking-wider mb-3">{t.designation}</p>

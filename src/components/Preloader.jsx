@@ -4,7 +4,7 @@ import logo from '../assets/logo.png'
 
 const Preloader = ({ progress, message }) => {
     return (
-        <div className="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center font-bengali">
+        <div className="fixed inset-0 z-[10000] bg-slate-950/40 backdrop-blur-md flex flex-col items-center justify-center font-bengali">
             {/* Ambient Background Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px]" />
 
@@ -13,14 +13,14 @@ const Preloader = ({ progress, message }) => {
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5 }}
-                    className="flex flex-col items-center gap-4 mb-4"
+                    className="flex flex-row items-center gap-4 mb-4"
                 >
                     <div className="relative">
                         <div className="absolute inset-0 bg-emerald-500/30 blur-xl rounded-full animate-pulse" />
-                        <img src={logo} alt="Madrasa Logo" className="w-20 h-20 object-contain relative z-10 drop-shadow-lg" />
+                        <img src={logo} alt="Madrasa Logo" className="w-16 h-16 object-contain relative z-10 drop-shadow-lg" />
                     </div>
 
-                    <div className="text-center space-y-1">
+                    <div className="text-left">
                         <h2 className="text-xl md:text-2xl font-black text-white tracking-wide drop-shadow-md">
                             সুফিয়া নূরীয়া দাখিল মাদ্রাসা
                         </h2>
