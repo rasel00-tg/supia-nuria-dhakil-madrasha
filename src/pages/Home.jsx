@@ -8,19 +8,27 @@ import 'swiper/css/navigation'
 import { Phone, Mail, MapPin, Send, Clock } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Hero from '../components/Hero'
+import { useState, useEffect } from 'react'
+import { collection, onSnapshot } from 'firebase/firestore'
+import { db } from '../firebase'
+import logo from '../assets/logo.png'
 
 const Home = () => {
-    const committee = [
-        { name: 'হাজী আব্দুল লতিফ', role: 'সভাপতি', img: 'https://i.pravatar.cc/150?u=1', bio: 'মাদ্রাসার সার্বিক উন্নয়নে নিবেদিত।' },
-        { name: 'মাওলানা আব্দুল মান্নান', role: 'মুহতামিম', img: 'https://i.pravatar.cc/150?u=2', bio: 'অভিজ্ঞ ইসলামী চিন্তাবিদ ও শিক্ষা সংস্কারক।' },
-        { name: 'মোঃ আব্দুর রশিদ', role: 'সেক্রেটারি', img: 'https://i.pravatar.cc/150?u=3', bio: 'প্রশাসনিক কাজের দক্ষ পরিচালক।' },
-        { name: 'মোঃ খলিলুর রহমান', role: 'কোষাধ্যক্ষ', img: 'https://i.pravatar.cc/150?u=4', bio: 'আর্থিক হিসাব ব্যবস্থাপনায় নিয়োজিত।' },
-    ]
+    const [committee, setCommittee] = useState([])
+    const [memorable, setMemorable] = useState([])
 
-    const memorial = [
-        { name: 'মাওলানা আবুল হাশেম', role: 'প্রতিষ্ঠাতা মুহতামিম', year: '২০১২', achievements: 'মাদ্রাসার ভিত্তি স্থাপন ও প্রাথমিক বিস্তার।', img: 'https://i.pravatar.cc/150?u=11' },
-        { name: 'হাজী মোঃ ইউসুফ', role: 'সাবেক সভাপতি', year: '২০১৫', achievements: 'একাডেমিক ভবনের অন্যতম দাতা।', img: 'https://i.pravatar.cc/150?u=12' },
-    ]
+    useEffect(() => {
+        const unsubCommittee = onSnapshot(collection(db, 'committee'), (snap) => {
+            setCommittee(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        })
+        const unsubMemorable = onSnapshot(collection(db, 'memorable'), (snap) => {
+            setMemorable(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        })
+        return () => {
+            unsubCommittee();
+            unsubMemorable();
+        }
+    }, [])
 
     const galleryImages = [
         'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=800',
@@ -91,7 +99,7 @@ const Home = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
                         {committee.map((member, i) => (
                             <motion.div
-                                key={i}
+                                key={member.id || i}
                                 initial={{ opacity: 0, y: 20 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.1 }}
@@ -100,11 +108,11 @@ const Home = () => {
                             >
                                 <div className="relative inline-block mb-3 md:mb-6">
                                     <div className="absolute inset-0 bg-indigo-500 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                                    <img src={member.img} alt={member.name} className="relative w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-xl mx-auto" />
+                                    <img src={member.imageUrl || logo} alt={member.name} className="relative w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-xl mx-auto" />
                                 </div>
                                 <h4 className="text-sm md:text-2xl font-black text-slate-900 mb-1 line-clamp-1">{member.name}</h4>
-                                <p className="text-indigo-600 font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 md:mb-4 line-clamp-1">{member.role}</p>
-                                <Link to="#" className="inline-block px-3 py-1 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-600 text-[10px] md:text-xs font-black rounded-full transition-all duration-300">বিস্তারিত</Link>
+                                <p className="text-indigo-600 font-bold text-[10px] md:text-sm uppercase tracking-widest mb-1 md:mb-4 line-clamp-1">{member.designation}</p>
+                                <p className="text-slate-500 text-xs line-clamp-2">{member.quote}</p>
                             </motion.div>
                         ))}
                     </div>
@@ -123,26 +131,9 @@ const Home = () => {
                         <p className="text-slate-400 font-bold max-w-2xl mx-auto">যাঁদের অক্লান্ত পরিশ্রম ও ত্যাগের বিনিময়ে এই প্রতিষ্ঠান আজ এই অবস্থানে।</p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-8">
-                        {memorial.map((person, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                whileInView={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: i * 0.2 }}
-                                viewport={{ once: true }}
-                                className="bg-white/5 backdrop-blur-xl p-4 md:p-10 rounded-[24px] md:rounded-[48px] border border-white/10 flex flex-col items-center gap-3 md:gap-6 hover:bg-white/10 transition-all group h-full"
-                            >
-                                <div className="flex items-center gap-2 md:gap-4 self-start md:self-center w-full justify-center">
-                                    <img src={person.img} alt={person.name} className="w-16 h-16 md:w-32 md:h-32 rounded-full object-cover border-2 border-emerald-500/30 group-hover:border-emerald-500 transition-colors" />
-                                    <p className="text-emerald-400 font-black text-[10px] md:text-lg">শ্রদ্ধাঞ্জলি</p>
-                                </div>
-                                <div className="text-center w-full space-y-1 md:space-y-2">
-                                    <h4 className="text-sm md:text-3xl font-black text-white">{person.name}</h4>
-                                    <p className="text-rose-400 font-black text-[10px] md:text-sm uppercase tracking-widest">মৃত্যু: {person.year}</p>
-                                    <p className="text-slate-300 font-medium text-[10px] md:text-base leading-relaxed mt-2">অবদান বিস্তারিত</p>
-                                </div>
-                            </motion.div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-8">
+                        {memorable.map((person, i) => (
+                            <MemorialCard key={person.id || i} person={person} index={i} />
                         ))}
                     </div>
                 </div>
@@ -260,6 +251,39 @@ const Home = () => {
             </section>
 
         </div>
+    )
+}
+
+const MemorialCard = ({ person, index }) => {
+    const [expanded, setExpanded] = useState(false);
+    const isLong = person.contribution && person.contribution.length > 80;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.2 }}
+            viewport={{ once: true }}
+            className="bg-white/5 backdrop-blur-xl p-4 md:p-10 rounded-[24px] md:rounded-[48px] border border-white/10 flex flex-col items-center gap-3 md:gap-6 hover:bg-white/10 transition-all group h-full"
+        >
+            <div className="flex items-center gap-2 md:gap-4 self-start md:self-center w-full justify-center">
+                <img src={person.imageUrl || logo} alt={person.name} className="w-16 h-16 md:w-32 md:h-32 rounded-full object-cover border-2 border-emerald-500/30 group-hover:border-emerald-500 transition-colors" />
+                <p className="text-emerald-400 font-black text-[10px] md:text-lg">শ্রদ্ধাঞ্জলি</p>
+            </div>
+            <div className="text-center w-full space-y-1 md:space-y-2">
+                <h4 className="text-sm md:text-3xl font-black text-white">{person.name}</h4>
+                <p className="text-rose-400 font-black text-[10px] md:text-sm uppercase tracking-widest">মৃত্যু: {person.year}</p>
+                <div className="text-slate-300 font-medium text-[10px] md:text-base leading-relaxed mt-2">
+                    {expanded ? person.contribution : (person.contribution?.slice(0, 80) || '')}
+                    {isLong && !expanded && '...'}
+                </div>
+                {isLong && (
+                    <button onClick={() => setExpanded(!expanded)} className="text-emerald-400 text-xs font-bold mt-1 hover:underline">
+                        {expanded ? 'সংক্ষিপ্ত করুন' : 'বিস্তারিত পড়ুন'}
+                    </button>
+                )}
+            </div>
+        </motion.div>
     )
 }
 

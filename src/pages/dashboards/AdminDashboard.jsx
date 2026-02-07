@@ -354,6 +354,8 @@ const AdminDashboard = () => {
     const [routines, setRoutines] = useState([])
     const [achievements, setAchievements] = useState([])
     const [committee, setCommittee] = useState([])
+    const [memorable, setMemorable] = useState([])
+    const [activeMemberTab, setActiveMemberTab] = useState('committee')
     const [events, setEvents] = useState([])
     const [admins, setAdmins] = useState([])
     const [settings, setSettings] = useState({})
@@ -403,6 +405,9 @@ const AdminDashboard = () => {
 
         const cSnap = await getDocs(collection(db, 'committee'))
         setCommittee(cSnap.docs.map(d => ({ id: d.id, ...d.data() })))
+
+        const mSnap = await getDocs(collection(db, 'memorable'))
+        setMemorable(mSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
         const eSnap = await getDocs(collection(db, 'events'))
         setEvents(eSnap.docs.map(d => ({ id: d.id, ...d.data() })))
@@ -480,6 +485,55 @@ const AdminDashboard = () => {
             fetchAdditionalData()
         } catch (error) {
             setPopup({ isOpen: true, title: 'সমস্যা!', message: 'মুছে ফেলা সম্ভব হয়নি।', type: 'error' })
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
+        }
+    }
+
+    // -- COMMITTEE & MEMORABLE ADD LOGIC --
+    const handleAddMember = async () => {
+        const type = activeMemberTab; // 'committee' or 'memorable'
+        const collectionName = type;
+        const typeBn = type === 'committee' ? 'কমিটি' : 'স্মরণীয়';
+
+        // Validation
+        if (type === 'committee' && (!formData.name || !formData.designation)) {
+            toast.error('নাম এবং পদবি আবশ্যক!');
+            return;
+        }
+        if (type === 'memorable' && (!formData.name || !formData.year)) {
+            toast.error('নাম এবং মৃত্যুর সাল আবশ্যক!');
+            return;
+        }
+
+        setLoadingMessage(`আপনার (${typeBn}) এড হচ্ছে, দয়া করে অপেক্ষা করুন....`);
+        setLoading(true);
+
+        try {
+            let photoURL = null;
+            if (file) {
+                try {
+                    photoURL = await uploadToImgBB(file);
+                } catch (error) {
+                    console.error(error);
+                    throw new Error("ছবি আপলোড ব্যর্থ হয়েছে।");
+                }
+            }
+
+            await addDoc(collection(db, collectionName), {
+                ...formData,
+                imageUrl: photoURL || null,
+                createdAt: serverTimestamp()
+            });
+
+            setPopup({ isOpen: true, title: 'সফল!', message: `${typeBn} সফলভাবে যুক্ত করা হয়েছে।`, type: 'success' });
+            setFormData({});
+            setFile(null);
+            fetchAdditionalData();
+        } catch (error) {
+            console.error(error);
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'সমস্যা হয়েছে। আবার চেষ্টা করুন।', type: 'error' });
         } finally {
             setLoading(false);
             setLoadingMessage('');
@@ -1335,21 +1389,41 @@ const AdminDashboard = () => {
                 {activeTab === 'committee' && (
                     <Section title="কমিটি ও স্মরণীয় ব্যক্তি">
                         <div className="flex gap-4 mb-4">
-                            <button className="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-bold">ম্যানেজিং কমিটি</button>
-                            <button className="px-4 py-2 bg-white/5 rounded-lg text-sm font-bold text-slate-400">স্মরণীয় ব্যক্তি</button>
+                            <button onClick={() => { setActiveMemberTab('committee'); setFormData({}); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeMemberTab === 'committee' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>ম্যানেজিং কমিটি</button>
+                            <button onClick={() => { setActiveMemberTab('memorable'); setFormData({}); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeMemberTab === 'memorable' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>স্মরণীয় ব্যক্তি</button>
                         </div>
-                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('committee', formData, true, 'committee'); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 grid md:grid-cols-2 gap-4">
-                            <Input placeholder="নাম" onChange={e => setFormData({ ...formData, name: e.target.value })} required />
-                            <Input placeholder="পদবি (যেমন: সভাপতি)" onChange={e => setFormData({ ...formData, position: e.target.value })} required />
-                            <div className="md:col-span-2"><input type="file" onChange={e => setFile(e.target.files[0])} className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400" /></div>
+
+                        <form onSubmit={(e) => { e.preventDefault(); handleAddMember(); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 grid md:grid-cols-2 gap-4">
+                            <Input placeholder="নাম (Name)" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+
+                            {activeMemberTab === 'committee' ? (
+                                <>
+                                    <Input placeholder="পদবি (Designation)" value={formData.designation || ''} onChange={e => setFormData({ ...formData, designation: e.target.value })} required />
+                                    <textarea placeholder="উক্তি (Quote)..." value={formData.quote || ''} onChange={e => setFormData({ ...formData, quote: e.target.value })} className="md:col-span-2 bg-slate-800 border-b border-slate-700 rounded-t-lg p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors h-20" />
+                                </>
+                            ) : (
+                                <>
+                                    <Input placeholder="মৃত্যুর সাল (Year of Death)" value={formData.year || ''} onChange={e => setFormData({ ...formData, year: e.target.value })} required />
+                                    <textarea placeholder="অবদান (Contribution)..." value={formData.contribution || ''} onChange={e => setFormData({ ...formData, contribution: e.target.value })} className="md:col-span-2 bg-slate-800 border-b border-slate-700 rounded-t-lg p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors h-24" />
+                                </>
+                            )}
+
+                            <div className="md:col-span-2">
+                                <label className="text-xs text-slate-500 font-bold mb-1 block">ছবি আপলোড (WebP, Max 200KB)</label>
+                                <input type="file" onChange={e => setFile(e.target.files[0])} className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400" accept="image/*" />
+                            </div>
                             <button disabled={loading} className="md:col-span-2 bg-indigo-600 py-2 rounded-lg font-bold">{loading ? 'যুক্ত হচ্ছে...' : '+ সদস্য যুক্ত করুন'}</button>
                         </form>
+
                         <div className="space-y-2">
-                            {committee.map(c => (
+                            {(activeMemberTab === 'committee' ? committee : memorable).map(c => (
                                 <div key={c.id} className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/5">
                                     <img src={c.imageUrl || logo} className="w-10 h-10 rounded-full object-cover" />
-                                    <div><p className="font-bold">{c.name}</p><p className="text-xs text-slate-400">{c.position}</p></div>
-                                    <button onClick={() => handleDelete('committee', c.id)} className="ml-auto text-rose-500"><Trash2 size={16} /></button>
+                                    <div>
+                                        <p className="font-bold">{c.name}</p>
+                                        <p className="text-xs text-slate-400">{activeMemberTab === 'committee' ? c.designation : `মৃত্যু: ${c.year}`}</p>
+                                    </div>
+                                    <button onClick={() => handleDelete(activeMemberTab, c.id)} className="ml-auto text-rose-500"><Trash2 size={16} /></button>
                                 </div>
                             ))}
                         </div>
