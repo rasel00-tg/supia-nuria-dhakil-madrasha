@@ -23,10 +23,11 @@ const WelcomeScreen = ({ onComplete }) => {
                     transition={{ duration: 0.5 }}
                     className="fixed inset-0 h-screen w-full z-[99999] flex flex-col items-center justify-center font-bengali p-4 text-center"
                     style={{
-                        backgroundImage: "url('/welcome.png')",
+                        backgroundImage: `url('/assets/welcome.png?v=${new Date().getTime()}')`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat'
+                        backgroundRepeat: 'no-repeat',
+                        backgroundColor: 'transparent'
                     }}
                 >
                     {/* Dark Overlay */}
