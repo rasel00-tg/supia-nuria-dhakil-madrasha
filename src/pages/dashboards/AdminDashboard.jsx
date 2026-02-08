@@ -397,7 +397,7 @@ const AdminDashboard = () => {
     }, [])
 
     const fetchAdditionalData = async () => {
-        const rSnap = await getDocs(collection(db, 'routines'))
+        const rSnap = await getDocs(collection(db, 'exam_routines'))
         setRoutines(rSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
         const aSnap = await getDocs(collection(db, 'achievements'))
@@ -638,51 +638,66 @@ const AdminDashboard = () => {
         }
     }
 
+    // -- ROUTINE STATE & HANDLERS --
+    const [routineRows, setRoutineRows] = useState([{ date: '', day: '', subject: '', time: '', code: '' }])
+    const [historyFilter, setHistoryFilter] = useState('')
+
+    const handleRowChange = (index, field, value) => {
+        const newRows = [...routineRows]
+        newRows[index][field] = value
+        setRoutineRows(newRows)
+    }
+
+    const addRow = () => setRoutineRows([...routineRows, { date: '', day: '', subject: '', time: '', code: '' }])
+
+    const removeRow = (index) => {
+        if (routineRows.length > 1) {
+            setRoutineRows(routineRows.filter((_, i) => i !== index))
+        }
+    }
+
     // -- ROUTINE ADD LOGIC (NEW) --
     const handleAddRoutine = async () => {
-        const { date, day, subject, time, code, instructions, class: className } = formData;
+        const { class: className, instructions } = formData
 
-        if (!date || !day || !subject || !time || !className) {
-            toast.error('রুটিনের সব তথ্য পূরণ করা আবশ্যক!');
-            return;
+        if (!className) {
+            toast.error('ক্লাস সিলেক্ট করা আবশ্যক!')
+            return
         }
 
-        setLoadingMessage('রুটিন পাবলিশ হচ্ছে...');
-        setLoading(true);
+        // Validate Rows
+        const isValid = routineRows.every(r => r.date && r.day && r.subject && r.time)
+        if (!isValid) {
+            toast.error('রুটিনের প্রতিটি রো-এর তথ্য (তারিখ, বার, বিষয়, সময়) পূরণ করুন!')
+            return
+        }
+
+        setLoadingMessage('রুটিন পাবলিশ হচ্ছে...')
+        setLoading(true)
         try {
-            const routineItem = {
-                date, // Date Picker formatted value
-                day,
-                subject,
-                time,
-                code: code || '',
-                class: className
-            };
-
-            const docRef = doc(db, 'settings', 'exam_routine');
-
-            // We use arrayUnion to append to the list
-            // Also update 'rules' if instructions are provided
-            const updateData = {
-                routine: arrayUnion(routineItem)
-            };
-
-            if (instructions) {
-                // Split instructions by newline to make an array
-                const rulesArray = instructions.split('\n').filter(r => r.trim() !== '');
-                updateData.rules = rulesArray;
+            const routineData = {
+                class: className,
+                routine: routineRows,
+                rules: instructions ? instructions.split('\n').filter(r => r.trim() !== '') : [],
+                createdAt: serverTimestamp()
             }
 
-            await setDoc(docRef, updateData, { merge: true });
+            await addDoc(collection(db, 'exam_routines'), routineData)
 
-            setPopup({ isOpen: true, title: 'সফল!', message: 'রুটিন সফলভাবে আপডেট হয়েছে।', type: 'success' });
-            setFormData({ ...formData, subject: '', code: '', time: '' }); // Keep date/day/class for easier entry
+            setPopup({ isOpen: true, title: 'সফল!', message: `${className}-এর রুটিন সফলভাবে আপডেট হয়েছে।`, type: 'success' })
+
+            // Allow admin to keep adding for other classes, but reset rows? 
+            // User requirement doesn't specify reset behavior, but resetting rows is safe.
+            setRoutineRows([{ date: '', day: '', subject: '', time: '', code: '' }])
+            setFormData({ ...formData, instructions: '', class: '' }) // Reset Class as well for fresh entry
+
+            fetchAdditionalData()
         } catch (error) {
-            console.error("Routine Error:", error);
-            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'রুটিন আপডেট করা যায়নি।', type: 'error' });
+            console.error("Routine Error:", error)
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'রুটিন আপডেট করা যায়নি।', type: 'error' })
         } finally {
-            setLoading(false);
-            setLoadingMessage('');
+            setLoading(false)
+            setLoadingMessage('')
         }
     }
 
@@ -1281,87 +1296,115 @@ const AdminDashboard = () => {
 
                 {/* --- 7. Routine Publish --- */}
                 {activeTab === 'routine' && (
-                    <Section title="পরীক্ষার রুটিন আপলোড (New Logic)">
-                        <form onSubmit={(e) => { e.preventDefault(); handleAddRoutine(); }} className="mb-6 bg-white/5 p-6 rounded-2xl border border-white/10">
-                            <h4 className="text-indigo-300 font-bold mb-4 border-b border-white/5 pb-2">নতুন পরীক্ষা বা রুটিন যুক্ত করুন</h4>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">তারিখ (Date Picker)</label>
-                                    <Input
-                                        type="date"
-                                        value={formData.date || ''}
-                                        onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">বার (Day)</label>
-                                    <select
-                                        value={formData.day || ''}
-                                        onChange={e => setFormData({ ...formData, day: e.target.value })}
-                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white"
-                                        required
-                                    >
-                                        <option value="">নির্বাচন করুন</option>
-                                        {['শনিবার', 'রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার'].map(d => <option key={d} value={d}>{d}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">বিষয় (Subject)</label>
-                                    <Input
-                                        placeholder="বিষয়ের নাম"
-                                        value={formData.subject || ''}
-                                        onChange={e => setFormData({ ...formData, subject: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">সময় (Time)</label>
-                                    <Input
-                                        placeholder="যেমন: সকাল ১০:০০ - দুপুর ১:০০"
-                                        value={formData.time || ''}
-                                        onChange={e => setFormData({ ...formData, time: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">বিষয় কোড (Subject Code)</label>
-                                    <Input
-                                        placeholder="কোড"
-                                        value={formData.code || ''}
-                                        onChange={e => setFormData({ ...formData, code: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">শ্রেণি (Class)</label>
-                                    <select
-                                        value={formData.class || ''}
-                                        onChange={e => setFormData({ ...formData, class: e.target.value })}
-                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white"
-                                        required
-                                    >
-                                        <option value="">ক্লাস নির্বাচন করুন</option>
-                                        {['১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি', '৪র্থ শ্রেণি', '৫ম শ্রেণি', '৬ষ্ঠ শ্রেণি', '৭ম শ্রেণি', '৮ম শ্রেণি', '৯ম শ্রেণি', '১০ম শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                </div>
+                    <Section title="পরীক্ষার রুটিন ম্যানেজমেন্ট">
+                        <form onSubmit={(e) => { e.preventDefault(); handleAddRoutine(); }} className="mb-8 bg-white/5 p-6 rounded-2xl border border-white/10">
+                            <h4 className="text-indigo-300 font-bold mb-6 border-b border-white/5 pb-2">নতুন রুটিন তৈরি করুন</h4>
 
-                                <div className="md:col-span-2 space-y-1">
-                                    <label className="text-xs font-bold text-slate-500">পরীক্ষার্থীদের জন্য নির্দেশনা (Instructions/Rules)</label>
-                                    <textarea
-                                        placeholder="প্রতিটি নিয়ম নতুন লাইনে লিখুন..."
-                                        value={formData.instructions || ''}
-                                        onChange={e => setFormData({ ...formData, instructions: e.target.value })}
-                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white h-24 focus:outline-none focus:border-indigo-500"
-                                    />
-                                    <p className="text-[10px] text-slate-500">নোট: নির্দেশনাগুলো প্রিন্ট করার সময় রুটিনের নিচে থাকবে।</p>
-                                </div>
+                            {/* Class Selection */}
+                            <div className="mb-6">
+                                <label className="text-sm font-bold text-slate-400 mb-2 block">ক্লাস সিলেক্ট করুন *</label>
+                                <select
+                                    value={formData.class || ''}
+                                    onChange={e => setFormData({ ...formData, class: e.target.value })}
+                                    className="w-full md:w-1/2 bg-slate-800 border border-white/10 rounded-xl p-3 text-white font-bold"
+                                    required
+                                >
+                                    <option value="">ক্লাস নির্বাচন করুন</option>
+                                    {['১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি', '৪র্থ শ্রেণি', '৫ম শ্রেণি', '৬ষ্ঠ শ্রেণি', '৭ম শ্রেণি', '৮ম শ্রেণি', '৯ম শ্রেণি', '১০ম শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
                             </div>
-                            <button disabled={loading} className="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20">{loading ? 'আপডেট হচ্ছে...' : 'রুটিন ও নিয়ম আপডেট করুন'}</button>
+
+                            {/* Multi-row Inputs */}
+                            <div className="space-y-3 mb-6">
+                                <label className="text-sm font-bold text-slate-400 block">রুটিন ডাটা এন্ট্রি (একাধিক রো হতে পারে)</label>
+                                {routineRows.map((row, index) => (
+                                    <div key={index} className="flex flex-col md:flex-row gap-3 items-start md:items-end bg-slate-800/50 p-4 rounded-xl border border-white/5 animate-in fade-in slide-in-from-top-2">
+                                        <div className="w-full md:w-auto">
+                                            <span className="text-xs font-bold text-slate-400 block mb-2">তারিখ</span>
+                                            <input type="date" value={row.date} onChange={e => handleRowChange(index, 'date', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors" required />
+                                        </div>
+                                        <div className="w-full md:w-36">
+                                            <span className="text-xs font-bold text-slate-400 block mb-2">বার</span>
+                                            <select value={row.day} onChange={e => handleRowChange(index, 'day', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors" required>
+                                                <option value="">-</option>
+                                                {['শনিবার', 'রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার'].map(d => <option key={d} value={d}>{d}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="flex-[2] w-full min-w-[200px]">
+                                            <span className="text-xs font-bold text-slate-400 block mb-2">বিষয়</span>
+                                            <input placeholder="বিষয় লিখুন..." value={row.subject} onChange={e => handleRowChange(index, 'subject', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors" required />
+                                        </div>
+                                        <div className="w-full md:w-48">
+                                            <span className="text-xs font-bold text-slate-400 block mb-2">সময়</span>
+                                            <input placeholder="সময়" value={row.time} onChange={e => handleRowChange(index, 'time', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors" required />
+                                        </div>
+                                        <div className="w-full md:w-28">
+                                            <span className="text-xs font-bold text-slate-400 block mb-2">কোড</span>
+                                            <input placeholder="কোড" value={row.code} onChange={e => handleRowChange(index, 'code', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:border-indigo-500 outline-none transition-colors" />
+                                        </div>
+                                        {routineRows.length > 1 && (
+                                            <button type="button" onClick={() => removeRow(index)} className="md:mb-[2px] p-3 bg-rose-500/20 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors h-[46px] w-full md:w-auto flex items-center justify-center">
+                                                <Trash2 size={20} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button type="button" onClick={addRow} className="text-sm font-bold text-indigo-400 hover:text-white flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors border border-dashed border-indigo-500/30">
+                                    + আরো রো যোগ করুন
+                                </button>
+                            </div>
+
+                            {/* Instructions */}
+                            <div className="mb-6">
+                                <label className="text-sm font-bold text-slate-400 mb-2 block">এই ক্লাসের জন্য বিশেষ নির্দেশনা</label>
+                                <textarea
+                                    placeholder="প্রতিটি নিয়ম নতুন লাইনে লিখুন..."
+                                    value={formData.instructions || ''}
+                                    onChange={e => setFormData({ ...formData, instructions: e.target.value })}
+                                    className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white h-24 focus:outline-none focus:border-indigo-500"
+                                />
+                            </div>
+
+                            <button disabled={loading} className="w-full bg-purple-600 hover:bg-purple-500 py-3 rounded-xl font-bold transition-all shadow-lg shadow-purple-500/20">
+                                {loading ? 'আপডেট হচ্ছে...' : 'রুটিন পাবলিশ করুন'}
+                            </button>
                         </form>
 
-                        {/* List of routines? Currently fetched from 'routines' collection, but we are now using 'settings/exam_routine' */}
-                        <div className="bg-rose-500/10 p-4 rounded-xl border border-rose-500/20 text-rose-300 text-sm">
-                            <p>নোট: রুটিন রিয়েল-টাইমে আপডেট হবে। পুরনো রুটিন মুছে ফেলতে চাইলে ডাটাবেস অ্যাডমিনের সাহায্য নিন অথবা পরবর্তী আপডেটে ডিলিট ফিচার আসবে।</p>
+                        {/* Routine History & Filter */}
+                        <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 border-b border-white/5 pb-4">
+                                <h4 className="text-indigo-300 font-bold">রুটিন হিস্ট্রি</h4>
+                                <select
+                                    value={historyFilter}
+                                    onChange={(e) => setHistoryFilter(e.target.value)}
+                                    className="bg-slate-800 border-2 border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white font-bold outline-none focus:border-indigo-500"
+                                >
+                                    <option value="">সকল শ্রেণি</option>
+                                    {['১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি', '৪র্থ শ্রেণি', '৫ম শ্রেণি', '৬ষ্ঠ শ্রেণি', '৭ম শ্রেণি', '৮ম শ্রেণি', '৯ম শ্রেণি', '১০ম শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="space-y-3">
+                                {routines
+                                    .filter(r => !historyFilter || r.class === historyFilter)
+                                    .map(r => (
+                                        <div key={r.id} className="bg-slate-800/50 p-4 rounded-xl border border-white/5 flex justify-between items-center group">
+                                            <div>
+                                                <h5 className="font-bold text-white text-lg">{r.class} <span className="text-xs font-normal text-slate-400 ml-2">({r.routine?.length || 0} subjects)</span></h5>
+                                                <p className="text-xs text-slate-500 mt-1">Published: {r.createdAt?.seconds ? new Date(r.createdAt.seconds * 1000).toLocaleString() : 'Just now'}</p>
+                                            </div>
+                                            <div className="flex gap-3">
+                                                {/* Edit could be added here later */}
+                                                <button onClick={() => handleDelete('exam_routines', r.id)} className="text-slate-500 hover:text-rose-500 transition-colors p-2 hover:bg-rose-500/10 rounded-full">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                {routines.filter(r => !historyFilter || r.class === historyFilter).length === 0 && (
+                                    <EmptyState msg="কোনো রুটিন পাওয়া যায়নি।" />
+                                )}
+                            </div>
                         </div>
                     </Section>
                 )}
