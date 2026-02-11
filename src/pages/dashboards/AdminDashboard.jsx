@@ -400,7 +400,7 @@ const AdminDashboard = () => {
         const rSnap = await getDocs(collection(db, 'exam_routines'))
         setRoutines(rSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
-        const aSnap = await getDocs(collection(db, 'achievements'))
+        const aSnap = await getDocs(collection(db, 'success_students'))
         setAchievements(aSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
         const cSnap = await getDocs(collection(db, 'committee'))
@@ -421,47 +421,48 @@ const AdminDashboard = () => {
 
     // --- Actions ---
 
-    const handleUpload = async (file, path) => {
-        if (!file) return null;
-        setUploadProgress(1); // Start progress
-        const compressedFile = await compressImage(file);
-
-        const storageRef = ref(storage, `${path}/${Date.now()}_${compressedFile.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, compressedFile);
-
-        return new Promise((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setUploadProgress(progress);
-                },
-                (error) => {
-                    console.error('Upload Error:', error);
-                    reject(error);
-                },
-                async () => {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    setUploadProgress(0); // Reset after done
-                    resolve(downloadURL);
-                }
-            );
-        });
+    // --- ImgBB Upload Helper ---
+    const uploadToImgBB = async (file) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        const API_KEY = 'E22c8bb3aff47463d2a22e38293bac01'; // User provided API Key
+        const url = `https://api.imgbb.com/1/upload?key=${API_KEY}`;
+        try {
+            const response = await fetch(url, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.success) return data.data.url;
+            throw new Error(data.error?.message || 'ImgBB Upload Failed');
+        } catch (error) {
+            console.error("ImgBB Error:", error);
+            throw error;
+        }
     }
 
-    const handleAdd = async (collectionName, data, hasImage = false, imagePath = '') => {
-        setLoadingMessage('তথ্য সেভ হচ্ছে...');
+    const handleAdd = async (collectionName, data, hasImage = false) => {
+        // Map collection names to Bengali output names for Toast
+        const nameMap = {
+            'notices': 'নোটিশ',
+            'success_students': 'সফল শিক্ষার্থী',
+            'events': 'ইভেন্ট',
+            'achievements': 'অর্জন'
+        };
+        const subjectName = nameMap[collectionName] || 'আইটেম';
+
+        setLoadingMessage(`নতুন "${subjectName}" যোগ করা হচ্ছে...`);
         setLoading(true)
         try {
             let imageUrl = null;
             if (hasImage && file) {
-                imageUrl = await handleUpload(file, collectionName); // Corrected path to use collectionName
+                imageUrl = await uploadToImgBB(file);
             }
             await addDoc(collection(db, collectionName), {
                 ...data,
                 ...(imageUrl && { imageUrl }),
                 createdAt: serverTimestamp()
             })
-            setPopup({ isOpen: true, title: 'সফল!', message: 'সফলভাবে যুক্ত করা হয়েছে।', type: 'success' })
+            // Toast Notification
+            setPopup({ isOpen: true, title: 'সফল!', message: `নতুন "${subjectName}" যোগ করা হয়েছে`, type: 'success' })
+
             setFormData({})
             setFile(null)
             setPreviewImage(null)
@@ -495,7 +496,7 @@ const AdminDashboard = () => {
     const handleAddMember = async () => {
         const type = activeMemberTab; // 'committee' or 'memorable'
         const collectionName = type;
-        const typeBn = type === 'committee' ? 'কমিটি' : 'স্মরণীয়';
+        const typeBn = type === 'committee' ? 'কমিটি মেম্বার' : 'স্মরণীয় ব্যক্তি'; // Adjusted for better msg
 
         // Validation
         if (type === 'committee' && (!formData.name || !formData.designation)) {
@@ -507,22 +508,13 @@ const AdminDashboard = () => {
             return;
         }
 
-        if (type === 'committee') {
-            setLoadingMessage('আপনার পরিচালনা কমিটির সদস্য এড হচ্ছে, দয়া করে অপেক্ষা করুন....');
-        } else {
-            setLoadingMessage(`আপনার (${typeBn}) এড হচ্ছে, দয়া করে অপেক্ষা করুন....`);
-        }
+        setLoadingMessage(`নতুন "${typeBn}" যোগ করা হচ্ছে...`);
         setLoading(true);
 
         try {
             let photoURL = null;
             if (file) {
-                try {
-                    photoURL = await uploadToImgBB(file);
-                } catch (error) {
-                    console.error(error);
-                    throw new Error("ছবি আপলোড ব্যর্থ হয়েছে।");
-                }
+                photoURL = await uploadToImgBB(file);
             }
 
             await addDoc(collection(db, collectionName), {
@@ -531,7 +523,7 @@ const AdminDashboard = () => {
                 createdAt: serverTimestamp()
             });
 
-            setPopup({ isOpen: true, title: 'সফল!', message: `${typeBn} সফলভাবে যুক্ত করা হয়েছে।`, type: 'success' });
+            setPopup({ isOpen: true, title: 'সফল!', message: `নতুন "${typeBn}" যোগ করা হয়েছে`, type: 'success' });
             setFormData({});
             setFile(null);
             fetchAdditionalData();
@@ -541,28 +533,6 @@ const AdminDashboard = () => {
         } finally {
             setLoading(false);
             setLoadingMessage('');
-        }
-    }
-
-    // --- ImgBB Upload Helper ---
-    const uploadToImgBB = async (file) => {
-        const formData = new FormData();
-        formData.append('image', file);
-
-        // Using provided API Key
-        const API_KEY = 'E22c8bb3aff47463d2a22e38293bac01';
-        const url = `https://api.imgbb.com/1/upload?key=${API_KEY}`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            return data.data.url;
-        } else {
-            throw new Error(data.error?.message || 'ImgBB Upload Failed');
         }
     }
 
@@ -581,7 +551,7 @@ const AdminDashboard = () => {
         }
 
         // Dynamic Loading Message
-        setLoadingMessage('আপনার শিক্ষক এড হচ্ছে, দয়া করে অপেক্ষা করুন....');
+        setLoadingMessage('নতুন "শিক্ষক" যোগ করা হচ্ছে...');
         setLoading(true)
         setUploadProgress(0);
 
@@ -598,6 +568,7 @@ const AdminDashboard = () => {
                     console.error("Image Upload Failed:", uploadError);
                     throw new Error("ছবি আপলোড ব্যর্থ হয়েছে। ImgBB তে সমস্যা বা API Key চেক করুন।");
                 }
+
             }
 
             // Save Data (Firestore creates collection automatically if missing)
@@ -612,7 +583,7 @@ const AdminDashboard = () => {
             setPopup({
                 isOpen: true,
                 title: 'সফল!',
-                message: 'আপনার শিক্ষক এড করা সফলভাবে সম্পন্ন হয়েছে।',
+                message: 'নতুন "শিক্ষক" যোগ করা হয়েছে',
                 type: 'success'
             })
 
@@ -684,7 +655,7 @@ const AdminDashboard = () => {
 
             await addDoc(collection(db, 'exam_routines'), routineData)
 
-            setPopup({ isOpen: true, title: 'সফল!', message: `${className}-এর রুটিন সফলভাবে আপডেট হয়েছে।`, type: 'success' })
+            setPopup({ isOpen: true, title: 'সফল!', message: 'নতুন "রুটিন" যোগ করা হয়েছে', type: 'success' })
 
             // Allow admin to keep adding for other classes, but reset rows? 
             // User requirement doesn't specify reset behavior, but resetting rows is safe.
@@ -1409,38 +1380,43 @@ const AdminDashboard = () => {
                     </Section>
                 )}
 
-                {/* --- 6. Success Stories --- */}
+                {/* --- 6. Success Stories (Success Students) --- */}
                 {activeTab === 'success' && (
                     <Section title="সাফল্য গাঁথা ও অর্জন">
-                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('achievements', formData, true, 'achievements'); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
-                            <Input placeholder="সাফল্যের শিরোনাম" onChange={e => setFormData({ ...formData, title: e.target.value })} required />
-                            <textarea placeholder="বিস্তারিত বর্ণনা..." onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-20" required />
-                            <input
-                                type="file"
-                                onChange={async e => {
-                                    if (e.target.files[0]) {
-                                        const rawFile = e.target.files[0];
-                                        try {
-                                            const compressed = await compressImage(rawFile);
-                                            setFile(compressed);
-                                        } catch (err) {
-                                            console.error("Compression Error:", err);
-                                            setFile(rawFile);
+                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('success_students', formData, true); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                            <Input placeholder="শিক্ষার্থীর নাম / শিরোনাম" onChange={e => setFormData({ ...formData, title: e.target.value })} required />
+                            <textarea placeholder="বিস্তারিত বর্ণনা (ফলাফল বা অর্জন)..." onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-20" required />
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500 font-bold block">ছবি আপলোড (WebP, Max 150KB)</label>
+                                <input
+                                    type="file"
+                                    onChange={async e => {
+                                        if (e.target.files[0]) {
+                                            const rawFile = e.target.files[0];
+                                            try {
+                                                const compressed = await compressImage(rawFile);
+                                                setFile(compressed);
+                                                setPreviewImage(URL.createObjectURL(compressed));
+                                            } catch (err) {
+                                                console.error("Compression Error:", err);
+                                                setFile(rawFile);
+                                            }
                                         }
-                                    }
-                                }}
-                                className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
-                                accept="image/*"
-                            />
-                            <button disabled={loading} className="w-full bg-indigo-600 py-2 rounded-xl font-bold">{loading ? 'যুক্ত হচ্ছে...' : '+ সাফল্য যুক্ত করুন'}</button>
+                                    }}
+                                    className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                    accept="image/*"
+                                />
+                            </div>
+                            <button disabled={loading} className="w-full bg-indigo-600 py-2 rounded-xl font-bold">{loading ? 'সেভ হচ্ছে...' : '+ সফল শিক্ষার্থী যুক্ত করুন'}</button>
                         </form>
                         <div className="grid md:grid-cols-3 gap-4">
                             {achievements.map(a => (
-                                <div key={a.id} className="bg-white/5 rounded-xl overflow-hidden border border-white/10">
-                                    <img src={a.imageUrl} className="w-full h-32 object-cover" />
+                                <div key={a.id} className="bg-white/5 rounded-xl overflow-hidden border border-white/10 relative group">
+                                    <img src={a.imageUrl || logo} className="w-full h-48 object-cover" />
                                     <div className="p-3">
-                                        <h4 className="font-bold text-sm truncate">{a.title}</h4>
-                                        <button onClick={() => handleDelete('achievements', a.id)} className="mt-2 text-xs text-rose-500 font-bold">মুছে ফেলুন</button>
+                                        <h4 className="font-bold text-lg truncate">{a.title}</h4>
+                                        <p className="text-sm text-slate-400 line-clamp-2">{a.description}</p>
+                                        <button onClick={() => handleDelete('success_students', a.id)} className="mt-3 w-full py-1 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white text-xs font-bold transition-colors">মুছে ফেলুন</button>
                                     </div>
                                 </div>
                             ))}
@@ -1491,7 +1467,7 @@ const AdminDashboard = () => {
                                     accept="image/*"
                                 />
                             </div>
-                            <button disabled={loading} className="md:col-span-2 bg-indigo-600 py-2 rounded-lg font-bold">{loading ? 'যুক্ত হচ্ছে...' : '+ সদস্য যুক্ত করুন'}</button>
+                            <button disabled={loading} className="md:col-span-2 bg-indigo-600 py-2 rounded-lg font-bold">{loading ? (activeMemberTab === 'committee' ? 'কমিটি মেম্বার যুক্ত হচ্ছে...' : 'স্মরণীয় ব্যক্তি যুক্ত হচ্ছে...') : (activeMemberTab === 'committee' ? '+ কমিটি মেম্বার যুক্ত করুন' : '+ স্মরণীয় ব্যক্তি যুক্ত করুন')}</button>
                         </form>
 
                         <div className="space-y-2">
@@ -1563,7 +1539,7 @@ const AdminDashboard = () => {
                 {/* --- 11. Culture & Sports --- */}
                 {activeTab === 'events' && (
                     <Section title="সংস্কৃতি ও খেলাধুলা">
-                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('events', formData, true, 'events'); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('events', formData, true); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
                             <Input placeholder="ইভেন্টের নাম" onChange={e => setFormData({ ...formData, title: e.target.value })} required />
                             <Input placeholder="তারিখ" type="date" onChange={e => setFormData({ ...formData, date: e.target.value })} required />
                             <input

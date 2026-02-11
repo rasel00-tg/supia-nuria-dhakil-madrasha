@@ -16,6 +16,7 @@ import logo from '../assets/logo.png'
 const Home = () => {
     const [committee, setCommittee] = useState([])
     const [memorable, setMemorable] = useState([])
+    const [successStudents, setSuccessStudents] = useState([])
 
     useEffect(() => {
         try {
@@ -27,9 +28,14 @@ const Home = () => {
                 setMemorable(snap.docs.map(d => ({ id: d.id, ...d.data() })))
             }, (error) => console.error("Memorable Fetch Error:", error))
 
+            const unsubSuccess = onSnapshot(collection(db, 'success_students'), (snap) => {
+                setSuccessStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+            }, (error) => console.error("Success Students Fetch Error:", error))
+
             return () => {
                 unsubCommittee();
                 unsubMemorable();
+                unsubSuccess();
             }
         } catch (error) {
             console.error("Firebase Init Error:", error)
@@ -73,22 +79,41 @@ const Home = () => {
                         modules={[Autoplay, Pagination, Navigation]}
                         className="pb-16"
                     >
-                        {galleryImages?.slice(0, 6).map((img, index) => (
-                            <SwiperSlide key={index}>
-                                <motion.div
-                                    whileHover={{ y: -10 }}
-                                    className="group relative h-[300px] md:h-[400px] rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200"
-                                >
-                                    <img src={img} alt={`Achievement ${index}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
-                                    <div className="absolute bottom-8 left-8 right-8">
-                                        <div className="bg-emerald-500 w-12 h-1 bg-emerald-500 mb-4 rounded-full" />
-                                        <h4 className="text-white text-2xl font-black mb-2">প্রতিভাময় শিক্ষার্থী ২০২৬</h4>
-                                        <p className="text-slate-300 font-bold">মাদ্রাসার সম্মান অক্ষুণ্ণ রাখতে আমাদের শিক্ষার্থীদের নিরলস প্রচেষ্টা।</p>
-                                    </div>
-                                </motion.div>
-                            </SwiperSlide>
-                        ))}
+                        {successStudents.length > 0 ? (
+                            successStudents.map((student, index) => (
+                                <SwiperSlide key={student.id || index}>
+                                    <motion.div
+                                        whileHover={{ y: -10 }}
+                                        className="group relative h-[300px] md:h-[400px] rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200"
+                                    >
+                                        <img src={student.imageUrl} alt={student.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
+                                        <div className="absolute bottom-8 left-8 right-8">
+                                            <div className="bg-emerald-500 w-12 h-1 mb-4 rounded-full" />
+                                            <h4 className="text-white text-xl md:text-2xl font-black mb-2 line-clamp-1">{student.title}</h4>
+                                            <p className="text-slate-300 font-bold line-clamp-2 md:line-clamp-3 text-sm md:text-base">{student.description}</p>
+                                        </div>
+                                    </motion.div>
+                                </SwiperSlide>
+                            ))
+                        ) : (
+                            galleryImages.slice(0, 6).map((img, index) => (
+                                <SwiperSlide key={index}>
+                                    <motion.div
+                                        whileHover={{ y: -10 }}
+                                        className="group relative h-[300px] md:h-[400px] rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl shadow-slate-200"
+                                    >
+                                        <img src={img} alt={`Achievement ${index}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
+                                        <div className="absolute bottom-8 left-8 right-8">
+                                            <div className="bg-emerald-500 w-12 h-1 mb-4 rounded-full" />
+                                            <h4 className="text-white text-2xl font-black mb-2">প্রতিভাময় শিক্ষার্থী ২০২৬</h4>
+                                            <p className="text-slate-300 font-bold">মাদ্রাসার সম্মান অক্ষুণ্ণ রাখতে আমাদের শিক্ষার্থীদের নিরলস প্রচেষ্টা।</p>
+                                        </div>
+                                    </motion.div>
+                                </SwiperSlide>
+                            ))
+                        )}
                     </Swiper>
                 </div>
             </section>

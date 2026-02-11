@@ -1,13 +1,23 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { AuthContext } from '../App'
 
 const BackButton = ({ className = "" }) => {
     const navigate = useNavigate()
+    const { role } = useContext(AuthContext)
+
+    const handleBack = () => {
+        if (role === 'admin') {
+            navigate('/admin')
+        } else {
+            navigate(-1)
+        }
+    }
 
     return (
         <button
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className={`flex items-center gap-2 text-slate-500 font-bold hover:text-emerald-600 transition-colors mb-6 group ${className}`}
         >
             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
