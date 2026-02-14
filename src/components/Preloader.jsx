@@ -5,6 +5,70 @@ import logo from '../assets/logo.png'
 const Preloader = ({ progress, message }) => {
     return (
         <div className="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center font-bengali">
+            {/* 3D Book Animation Styles */}
+            <style>{`
+                .book-wrapper {
+                    position: relative;
+                    width: 80px;
+                    height: 60px;
+                    margin: 0 auto;
+                    perspective: 1000px;
+                }
+                .book {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    transform-style: preserve-3d;
+                    transform: rotateX(20deg) rotateY(-10deg);
+                }
+                .book-cover {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: #10b981;
+                    border-radius: 4px;
+                    transform: translateZ(-5px);
+                    box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+                }
+                .book-page {
+                    position: absolute;
+                    top: 5px;
+                    left: 40px; /* Center hinge */
+                    width: 38px;
+                    height: 50px;
+                    background: #fff;
+                    transform-origin: left;
+                    animation: pageFlask 1.5s infinite linear;
+                    border-radius: 0 4px 4px 0;
+                    border: 1px solid #eee;
+                    opacity: 0.9;
+                }
+                .book-page:nth-child(2) { animation-delay: 0.3s; }
+                .book-page:nth-child(3) { animation-delay: 0.6s; }
+                .book-page:nth-child(4) { animation-delay: 0.9s; }
+
+                @keyframes pageFlask {
+                    0% { transform: rotateY(0deg); opacity: 1; z-index: 5; }
+                    25% { opacity: 1; }
+                    50% { transform: rotateY(-170deg); opacity: 0.8; z-index: 10; }
+                    100% { transform: rotateY(-180deg); opacity: 0; z-index: 1; }
+                }
+                
+                .book-spine {
+                    position: absolute;
+                    top: 0;
+                    left: 38px;
+                    width: 4px;
+                    height: 100%;
+                    background: #059669;
+                    transform: rotateY(90deg) translateX(-2px);
+                }
+            `}</style>
+
             {/* Animated Gradient Background Rays */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 -left-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse" />
@@ -16,29 +80,16 @@ const Preloader = ({ progress, message }) => {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="flex flex-col items-center gap-6 mb-8 text-center"
+                    className="flex flex-col items-center gap-8 mb-8 text-center"
                 >
-                    {/* Logo and Name in One Line */}
+                    {/* Header: Logo and Name in One Line */}
                     <div className="flex flex-row items-center justify-center gap-4">
-                        <div className="relative group">
-                            <div className="absolute inset-0 bg-emerald-500/40 blur-2xl rounded-full group-hover:scale-110 transition-transform duration-500" />
-                            <div className="relative w-16 h-16 md:w-20 md:h-20 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 shadow-2xl">
-                                <img src={logo} alt="Madrasa Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain drop-shadow-lg" />
-                            </div>
-                            {/* Spinning border */}
-                            <svg className="absolute -inset-2 w-[calc(100%+16px)] h-[calc(100%+16px)] animate-spin-slow">
-                                <circle cx="50%" cy="50%" r="48%" fill="none" stroke="url(#gradient)" strokeWidth="2" strokeDasharray="30 150" />
-                                <defs>
-                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#10b981" />
-                                        <stop offset="100%" stopColor="#6366f1" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
+                        <div className="relative w-12 h-12 md:w-16 md:h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 shadow-xl">
+                            <img src={logo} alt="Madrasa Logo" className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-lg" />
                         </div>
 
                         <div className="text-left">
-                            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight drop-shadow-2xl">
+                            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-2xl">
                                 সুফিয়া নূরীয়া
                             </h2>
                             <div className="flex items-center gap-2">
@@ -48,7 +99,18 @@ const Preloader = ({ progress, message }) => {
                         </div>
                     </div>
 
-                    {/* Message Display - Below Icon/Name */}
+                    {/* 3D Book Animation */}
+                    <div className="book-wrapper">
+                        <div className="book">
+                            <div className="book-cover"></div>
+                            <div className="book-spine"></div>
+                            <div className="book-page"></div>
+                            <div className="book-page"></div>
+                            <div className="book-page"></div>
+                        </div>
+                    </div>
+
+                    {/* Dynamic Message */}
                     <div className="relative w-64 md:w-80 text-center space-y-3 mt-4">
                         <motion.p
                             key={message}
@@ -59,6 +121,7 @@ const Preloader = ({ progress, message }) => {
                             {message || 'লোডিং...'}
                         </motion.p>
 
+                        {/* Progress Bar */}
                         <div className="relative h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
                             {progress !== undefined ? (
                                 <motion.div
@@ -78,6 +141,7 @@ const Preloader = ({ progress, message }) => {
                     </div>
                 </motion.div>
 
+                {/* Footer/Established */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -94,4 +158,3 @@ const Preloader = ({ progress, message }) => {
 }
 
 export default Preloader
-
