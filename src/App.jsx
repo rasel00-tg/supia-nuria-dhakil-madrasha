@@ -23,6 +23,7 @@ import Routine from './pages/Routine'
 import AdminDashboard from './pages/dashboards/AdminDashboard'
 import TeacherDashboard from './pages/dashboards/TeacherDashboard'
 import StudentDashboard from './pages/dashboards/StudentDashboard'
+import HifzList from './pages/HifzList'
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -88,6 +89,7 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
                     <Route path="/notices" element={<Notices />} />
                     <Route path="/teachers" element={<TeachersList />} />
                     <Route path="/routine" element={<Routine />} />
+                    <Route path="/hifz" element={<HifzList />} />
                     <Route path="/admission" element={<Admission />} />
                     <Route path="/admission-info" element={<AdmissionInfo />} />
                     <Route path="/gallery" element={<Gallery />} />

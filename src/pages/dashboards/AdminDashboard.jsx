@@ -11,7 +11,7 @@ import {
     Users, Bell, CheckCircle, XCircle, LayoutDashboard, Megaphone,
     Trash2, Clock, ShieldCheck, FileText, Send, Loader, UserPlus,
     Settings, LogOut, Menu, X, Undo, Phone, MapPin, Award, UserCheck, Smartphone,
-    Image as ImageIcon, Calendar, Star, AlertTriangle, Key, Download, Eye, FileBadge, ArrowLeft
+    Image as ImageIcon, Calendar, Star, AlertTriangle, Key, Download, Eye, FileBadge, ArrowLeft, BookOpen
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -357,6 +357,7 @@ const AdminDashboard = () => {
     const [memorable, setMemorable] = useState([])
     const [activeMemberTab, setActiveMemberTab] = useState('committee')
     const [events, setEvents] = useState([])
+    const [hifzList, setHifzList] = useState([])
     const [admins, setAdmins] = useState([])
     const [settings, setSettings] = useState({})
 
@@ -412,6 +413,9 @@ const AdminDashboard = () => {
         const eSnap = await getDocs(collection(db, 'events'))
         setEvents(eSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
+        const hifzSnap = await getDocs(query(collection(db, 'hifz_department'), orderBy('createdAt', 'desc')))
+        setHifzList(hifzSnap.docs.map(d => ({ id: d.id, ...d.data() })))
+
         const admSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'admin')))
         setAdmins(admSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
@@ -444,7 +448,8 @@ const AdminDashboard = () => {
             'notices': 'নোটিশ',
             'success_students': 'সফল শিক্ষার্থী',
             'events': 'ইভেন্ট',
-            'achievements': 'অর্জন'
+            'achievements': 'অর্জন',
+            'hifz_department': 'হাফেজ'
         };
         const subjectName = nameMap[collectionName] || 'আইটেম';
 
@@ -1022,6 +1027,7 @@ const AdminDashboard = () => {
                             <SidebarItem id="teachers" icon={<Award size={18} />} label="শিক্ষক ম্যানেজমেন্ট" />
                             <SidebarItem id="notices" icon={<Bell size={18} />} label="নোটিশ বোর্ড" />
                             <SidebarItem id="routine" icon={<Calendar size={18} />} label="রুটিন পাবলিশ" />
+                            <SidebarItem id="hifz" icon={<BookOpen size={18} />} label="হিফজ বিভাগ" />
                             <SidebarItem id="success" icon={<Star size={18} />} label="সাফল্য গাঁথা" />
                             <SidebarItem id="committee" icon={<Users size={18} />} label="কমিটি ও স্মরণীয়" />
                             <SidebarItem id="complaints" icon={<AlertTriangle size={18} />} label="অভিযোগ বক্স" />
@@ -1376,6 +1382,57 @@ const AdminDashboard = () => {
                                     <EmptyState msg="কোনো রুটিন পাওয়া যায়নি।" />
                                 )}
                             </div>
+                        </div>
+                    </Section>
+                )}
+
+                {/* --- Hifz Section (New) --- */}
+                {activeTab === 'hifz' && (
+                    <Section title="হিফজ বিভাগ ম্যানেজমেন্ট">
+                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('hifz_department', formData, true); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                            <Input placeholder="হাফেজের নাম" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                            <Input placeholder="পিতার নাম" value={formData.fatherName || ''} onChange={e => setFormData({ ...formData, fatherName: e.target.value })} required />
+                            <textarea placeholder="ঠিকানা..." value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full bg-slate-800 border-b border-slate-700 rounded-t-lg p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors h-20" required />
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500 font-bold block">ছবি আপলোড (WebP, Max 150KB)</label>
+                                <input
+                                    type="file"
+                                    onChange={async e => {
+                                        if (e.target.files[0]) {
+                                            const rawFile = e.target.files[0];
+                                            try {
+                                                const compressed = await compressImage(rawFile);
+                                                setFile(compressed);
+                                            } catch (err) {
+                                                console.error("Compression Error:", err);
+                                                setFile(rawFile);
+                                            }
+                                        }
+                                    }}
+                                    className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                    accept="image/*"
+                                    required
+                                />
+                            </div>
+                            <button disabled={loading} className="w-full bg-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-500/20">{loading ? 'যুক্ত হচ্ছে...' : '+ হাফেজ যুক্ত করুন'}</button>
+                        </form>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {hifzList.map(h => (
+                                <div key={h.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4 group hover:bg-white/10 transition-colors">
+                                    <img src={h.imageUrl || logo} className="w-16 h-16 rounded-full object-cover border-2 border-indigo-500/30" />
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-white truncate">{h.name}</h4>
+                                        <p className="text-xs text-slate-400 truncate">পিতা: {h.fatherName}</p>
+                                        <p className="text-xs text-slate-500 truncate">{h.address}</p>
+                                    </div>
+                                    <button onClick={() => handleDelete('hifz_department', h.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                            {hifzList.length === 0 && <EmptyState msg="কোনো হাফেজের তথ্য নেই।" />}
                         </div>
                     </Section>
                 )}
