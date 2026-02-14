@@ -5,18 +5,56 @@ import { Autoplay, Pagination, Navigation } from 'swiper/modules'
 import 'swiper/css'
 import 'swiper/css/pagination'
 import 'swiper/css/navigation'
-import { Phone, Mail, MapPin, Send, Clock, X } from 'lucide-react'
+import { Phone, Mail, MapPin, Send, Clock, X, ArrowRight, CheckCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Hero from '../components/Hero'
 import { useState, useEffect } from 'react'
-import { collection, onSnapshot } from 'firebase/firestore'
+import { collection, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import logo from '../assets/logo.png'
+import toast from 'react-hot-toast'
 
 const Home = () => {
     const [committee, setCommittee] = useState([])
     const [memorable, setMemorable] = useState([])
     const [successStudents, setSuccessStudents] = useState([])
+    const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' })
+    const [successPopup, setSuccessPopup] = useState(false)
+    const [sending, setSending] = useState(false)
+
+    const handleContactSubmit = async (e) => {
+        e.preventDefault()
+        const lastMsgTime = localStorage.getItem('last_msg_time')
+        const now = Date.now()
+
+        if (lastMsgTime && now - parseInt(lastMsgTime) < 3600000) {
+            toast.error('অনুগ্রহ করে ১ ঘণ্টা পর আবার চেষ্টা করুন।')
+            return
+        }
+
+        if (!contactForm.name || !contactForm.message) {
+            toast.error('অনুগ্রহ করে নাম এবং বার্তা পূরণ করুন।')
+            return
+        }
+
+        setSending(true)
+        try {
+            await addDoc(collection(db, 'contacts'), {
+                full_name: contactForm.name,
+                email: contactForm.email,
+                message: contactForm.message,
+                createdAt: serverTimestamp()
+            })
+            localStorage.setItem('last_msg_time', now.toString())
+            setSuccessPopup(true)
+            setContactForm({ name: '', email: '', message: '' })
+        } catch (error) {
+            console.error("Error sending message:", error)
+            toast.error('দুঃখিত! বার্তা পাঠানো যায়নি।')
+        } finally {
+            setSending(false)
+        }
+    }
 
     useEffect(() => {
         try {
@@ -127,14 +165,20 @@ const Home = () => {
                         <div className="w-24 h-1.5 bg-indigo-600 mx-auto rounded-full" />
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
                         {committee && committee.length > 0 ? (
-                            committee.map((member, i) => (
+                            committee.slice(0, 4).map((member, i) => (
                                 <CommitteeCard key={member.id || i} member={member} index={i} />
                             ))
                         ) : (
                             <p className="text-center col-span-full text-slate-400">তথ্য লোড হচ্ছে...</p>
                         )}
+                    </div>
+
+                    <div className="text-center mt-12 md:mt-16">
+                        <Link to="/committee" className="inline-flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-bold transition-all shadow-lg hover:shadow-indigo-500/30 group">
+                            পরিচালনা কমিটির সকল সদস্য <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -151,14 +195,20 @@ const Home = () => {
                         <p className="text-slate-400 font-bold max-w-2xl mx-auto">যাঁদের অক্লান্ত পরিশ্রম ও ত্যাগের বিনিময়ে এই প্রতিষ্ঠান আজ এই অবস্থানে।</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-3 md:gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                         {memorable && memorable.length > 0 ? (
-                            memorable.map((person, i) => (
+                            memorable.slice(0, 3).map((person, i) => (
                                 <MemorialCard key={person.id || i} person={person} index={i} />
                             ))
                         ) : (
                             <p className="text-center col-span-full text-slate-500 font-bold py-10">তথ্য লোড হচ্ছে...</p>
                         )}
+                    </div>
+
+                    <div className="text-center mt-12 md:mt-16">
+                        <Link to="/memorable" className="inline-flex items-center gap-2 px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-bold transition-all shadow-lg hover:shadow-emerald-500/30 group border border-emerald-400">
+                            সকল স্মরণীয়বৃন্দ <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -182,7 +232,7 @@ const Home = () => {
                                     <div className="w-10 md:w-24 h-1 md:h-1.5 bg-emerald-500 rounded-full" />
                                 </div>
 
-                                <form className="space-y-4 md:space-y-10 pt-2 md:pt-4">
+                                <form onSubmit={handleContactSubmit} className="space-y-4 md:space-y-10 pt-2 md:pt-4">
                                     <div className="space-y-3 md:space-y-6">
                                         <div className="group relative">
                                             <input
@@ -190,6 +240,9 @@ const Home = () => {
                                                 type="text"
                                                 id="name"
                                                 placeholder="Name"
+                                                value={contactForm.name}
+                                                onChange={e => setContactForm({ ...contactForm, name: e.target.value })}
+                                                required
                                             />
                                             <label htmlFor="name" className="absolute left-0 -top-2 md:-top-3.5 text-slate-400 text-[8px] md:text-xs font-black uppercase tracking-widest transition-all peer-placeholder-shown:text-[10px] md:peer-placeholder-shown:text-sm peer-placeholder-shown:top-2 md:peer-placeholder-shown:top-4 peer-placeholder-shown:normal-case peer-focus:-top-2 md:peer-focus:-top-3.5 peer-focus:text-emerald-600 peer-focus:text-[8px] md:peer-focus:text-xs peer-focus:font-black">
                                                 নাম
@@ -202,6 +255,8 @@ const Home = () => {
                                                 type="email"
                                                 id="email"
                                                 placeholder="Email"
+                                                value={contactForm.email}
+                                                onChange={e => setContactForm({ ...contactForm, email: e.target.value })}
                                             />
                                             <label htmlFor="email" className="absolute left-0 -top-2 md:-top-3.5 text-slate-400 text-[8px] md:text-xs font-black uppercase tracking-widest transition-all peer-placeholder-shown:text-[10px] md:peer-placeholder-shown:text-sm peer-placeholder-shown:top-2 md:peer-placeholder-shown:top-4 peer-placeholder-shown:normal-case peer-focus:-top-2 md:peer-focus:-top-3.5 peer-focus:text-emerald-600 peer-focus:text-[8px] md:peer-focus:text-xs peer-focus:font-black">
                                                 ইমেইল
@@ -213,6 +268,9 @@ const Home = () => {
                                                 className="peer w-full py-2 md:py-4 border-b border-slate-200 outline-none focus:border-emerald-500 transition-colors bg-transparent placeholder-transparent text-slate-800 font-bold resize-none h-16 md:h-32 text-[10px] md:text-base"
                                                 id="message"
                                                 placeholder="Message"
+                                                value={contactForm.message}
+                                                onChange={e => setContactForm({ ...contactForm, message: e.target.value })}
+                                                required
                                             ></textarea>
                                             <label htmlFor="message" className="absolute left-0 -top-2 md:-top-3.5 text-slate-400 text-[8px] md:text-xs font-black uppercase tracking-widest transition-all peer-placeholder-shown:text-[10px] md:peer-placeholder-shown:text-sm peer-placeholder-shown:top-2 md:peer-placeholder-shown:top-4 peer-placeholder-shown:normal-case peer-focus:-top-2 md:peer-focus:-top-3.5 peer-focus:text-emerald-600 peer-focus:text-[8px] md:peer-focus:text-xs peer-focus:font-black">
                                                 বার্তা
@@ -221,10 +279,11 @@ const Home = () => {
                                     </div>
 
                                     <button
-                                        type="button"
-                                        className="px-4 py-2 md:px-10 md:py-4 bg-slate-900 text-white font-black rounded-full shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-[0.98] group text-[10px] md:text-base w-full md:w-auto"
+                                        type="submit"
+                                        disabled={sending}
+                                        className="px-4 py-2 md:px-10 md:py-4 bg-slate-900 text-white font-black rounded-full shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 md:gap-3 active:scale-[0.98] group text-[10px] md:text-base w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        SEND <Send size={12} className="group-hover:translate-x-1 md:w-5 md:h-5 transition-transform" />
+                                        {sending ? 'SENDING...' : 'SEND'} <Send size={12} className="group-hover:translate-x-1 md:w-5 md:h-5 transition-transform" />
                                     </button>
                                 </form>
                             </div>
@@ -274,6 +333,35 @@ const Home = () => {
                 </div>
             </section>
 
+            {/* Success Popup */}
+            {successPopup && (
+                <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSuccessPopup(false)}>
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-[2rem] p-8 max-w-md w-full text-center relative shadow-2xl overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
+                        <button onClick={() => setSuccessPopup(false)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                            <X size={20} />
+                        </button>
+
+                        <div className="w-20 h-20 mx-auto bg-emerald-100 rounded-full flex items-center justify-center mb-6 text-emerald-600">
+                            <CheckCircle size={40} strokeWidth={3} />
+                        </div>
+
+                        <h3 className="text-2xl font-black text-slate-800 mb-2">ধন্যবাদ!</h3>
+                        <p className="text-slate-600 font-medium mb-6">
+                            আপনার পরামর্শটি অতি গুরুত্বপূর্ণ। আমরা অতি শীগ্রই বাস্তবায়ন করার চেষ্টা করব ইনশাআল্লাহ।
+                        </p>
+
+                        <button onClick={() => setSuccessPopup(false)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all">
+                            ঠিক আছে
+                        </button>
+                    </motion.div>
+                </div>
+            )}
         </div>
     )
 }
@@ -298,7 +386,7 @@ const CommitteeCard = ({ member, index }) => {
 
                 <div className="relative inline-block mb-3 md:mb-6">
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-indigo-500 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500" />
-                    <img src={member.imageUrl || logo} alt={member.name} className="relative w-20 h-20 md:w-32 md:h-32 rounded-full object-cover border-4 border-slate-50 group-hover:border-indigo-500/20 shadow-xl mx-auto transition-colors duration-500" />
+                    <img src={member.imageUrl || logo} alt={member.name} className="relative w-24 h-24 md:w-36 md:h-36 rounded-full object-cover border-4 border-slate-50 group-hover:border-indigo-500/50 shadow-xl mx-auto transition-colors duration-500" />
                 </div>
 
                 <h4 className="relative text-sm md:text-2xl font-black text-slate-800 mb-1 line-clamp-1 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{member.name}</h4>

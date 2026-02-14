@@ -1100,7 +1100,7 @@ const AdminDashboard = () => {
                             <SidebarItem id="hifz" icon={<BookOpen size={18} />} label="হিফজ বিভাগ" />
                             <SidebarItem id="success" icon={<Star size={18} />} label="সাফল্য গাঁথা" />
                             <SidebarItem id="committee" icon={<Users size={18} />} label="কমিটি ও স্মরণীয়" />
-                            <SidebarItem id="complaints" icon={<AlertTriangle size={18} />} label="অভিযোগ বক্স" />
+                            <SidebarItem id="complaints" icon={<AlertTriangle size={18} />} label="অভিযোগ/পরামর্শ" />
                             <SidebarItem id="events" icon={<Smartphone size={18} />} label="সংস্কৃতি ও খেলাধুলা" />
                             <SidebarItem id="settings" icon={<Settings size={18} />} label="সেটিংস ও এডমিন" />
                         </div>

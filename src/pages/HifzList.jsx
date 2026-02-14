@@ -79,7 +79,7 @@ const HifzList = () => {
                 </div>
 
                 {/* 2. Hafez Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                <div className="grid grid-cols-3 gap-3 md:gap-6">
                     {hafezList && hafezList.length > 0 ? (
                         hafezList.map((hafez, i) => (
                             <HafezCard key={hafez.id || i} hafez={hafez} index={i} />
@@ -102,10 +102,10 @@ const HafezCard = ({ hafez, index }) => (
         viewport={{ once: true }}
         transition={{ delay: index * 0.05 }}
         whileHover={{ y: -10, scale: 1.02 }}
-        className="bg-white/70 backdrop-blur-md rounded-3xl shadow-lg border border-white/50 overflow-hidden flex flex-col group hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300"
+        className="bg-white/70 backdrop-blur-md rounded-xl md:rounded-3xl shadow-lg border border-white/50 overflow-hidden flex flex-col group hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300"
     >
         {/* Profile Image */}
-        <div className="relative aspect-square overflow-hidden bg-slate-100 m-2 rounded-2xl">
+        <div className="relative aspect-square overflow-hidden bg-slate-100 m-1 md:m-2 rounded-lg md:rounded-2xl">
             <img
                 src={hafez.imageUrl || logo}
                 alt={hafez.name}
@@ -115,14 +115,14 @@ const HafezCard = ({ hafez, index }) => (
         </div>
 
         {/* Info */}
-        <div className="p-5 pt-2 text-center space-y-2 flex-grow flex flex-col justify-center">
-            <h3 className="text-lg md:text-xl font-black text-slate-800 line-clamp-1 group-hover:text-emerald-600 transition-colors" title={hafez.name}>
+        <div className="p-2 md:p-5 pt-1 md:pt-2 text-center space-y-1 md:space-y-2 flex-grow flex flex-col justify-center">
+            <h3 className="text-xs md:text-xl font-black text-slate-800 line-clamp-1 group-hover:text-emerald-600 transition-colors leading-tight" title={hafez.name}>
                 {hafez.name}
             </h3>
 
-            <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-500">পিতা: {hafez.fatherName}</p>
-                <p className="text-xs text-slate-400">{hafez.address}</p>
+            <div className="space-y-0.5 md:space-y-1">
+                <p className="text-[9px] md:text-xs font-bold text-slate-500 line-clamp-1">পিতা: {hafez.fatherName}</p>
+                <p className="text-[8px] md:text-xs text-slate-400 line-clamp-1">{hafez.address}</p>
             </div>
         </div>
     </motion.div>

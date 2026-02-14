@@ -25,6 +25,8 @@ import TeacherDashboard from './pages/dashboards/TeacherDashboard'
 import StudentDashboard from './pages/dashboards/StudentDashboard'
 import HifzList from './pages/HifzList'
 import NuraniDepartment from './pages/NuraniDepartment'
+import CommitteeList from './pages/CommitteeList'
+import MemorableList from './pages/MemorableList'
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -94,6 +96,8 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
                     <Route path="/routine" element={<Routine />} />
                     <Route path="/hifz" element={<HifzList />} />
                     <Route path="/nurani-department" element={<NuraniDepartment />} />
+                    <Route path="/committee" element={<CommitteeList />} />
+                    <Route path="/memorable" element={<MemorableList />} />
                     <Route path="/admission" element={<Admission />} />
                     <Route path="/admission-info" element={<AdmissionInfo />} />
                     <Route path="/gallery" element={<Gallery />} />
