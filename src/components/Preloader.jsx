@@ -9,9 +9,10 @@ const Preloader = ({ progress, message }) => {
             <style>{`
                 .book-wrapper {
                     position: relative;
-                    width: 80px;
-                    height: 60px;
+                    width: 100px;
+                    height: 140px;
                     margin: 0 auto;
+                    transform-style: preserve-3d;
                     perspective: 1000px;
                 }
                 .book {
@@ -21,7 +22,8 @@ const Preloader = ({ progress, message }) => {
                     width: 100%;
                     height: 100%;
                     transform-style: preserve-3d;
-                    transform: rotateX(20deg) rotateY(-10deg);
+                    transform: rotateX(10deg);
+                    animation: bookFloat 3s ease-in-out infinite;
                 }
                 .book-cover {
                     position: absolute;
@@ -29,43 +31,54 @@ const Preloader = ({ progress, message }) => {
                     left: 0;
                     width: 100%;
                     height: 100%;
-                    background: #10b981;
-                    border-radius: 4px;
-                    transform: translateZ(-5px);
-                    box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    border-radius: 4px 10px 10px 4px;
+                    box-shadow: 
+                        inset 4px 0 10px rgba(0,0,0,0.1),
+                        inset -1px 0 2px rgba(255,255,255,0.3),
+                        5px 5px 15px rgba(0,0,0,0.15);
+                    z-index: 10;
+                    transform-origin: left;
+                    animation: coverOpen 2s ease-in-out infinite alternate;
                 }
                 .book-page {
                     position: absolute;
-                    top: 5px;
-                    left: 40px; /* Center hinge */
-                    width: 38px;
-                    height: 50px;
+                    top: 2px;
+                    left: 2px;
+                    width: 96%;
+                    height: 96%;
                     background: #fff;
+                    border-radius: 2px 8px 8px 2px;
+                    z-index: 5;
                     transform-origin: left;
-                    animation: pageFlask 1.5s infinite linear;
-                    border-radius: 0 4px 4px 0;
-                    border: 1px solid #eee;
-                    opacity: 0.9;
+                    animation: pageFlip 2s ease-in-out infinite alternate;
                 }
-                .book-page:nth-child(2) { animation-delay: 0.3s; }
-                .book-page:nth-child(3) { animation-delay: 0.6s; }
-                .book-page:nth-child(4) { animation-delay: 0.9s; }
+                .book-page:nth-child(2) { animation-delay: 0.1s; }
+                .book-page:nth-child(3) { animation-delay: 0.2s; }
 
-                @keyframes pageFlask {
-                    0% { transform: rotateY(0deg); opacity: 1; z-index: 5; }
-                    25% { opacity: 1; }
-                    50% { transform: rotateY(-170deg); opacity: 0.8; z-index: 10; }
-                    100% { transform: rotateY(-180deg); opacity: 0; z-index: 1; }
-                }
-                
-                .book-spine {
+                .book-back {
                     position: absolute;
                     top: 0;
-                    left: 38px;
-                    width: 4px;
+                    left: 0;
+                    width: 100%;
                     height: 100%;
-                    background: #059669;
-                    transform: rotateY(90deg) translateX(-2px);
+                    background: #047857;
+                    border-radius: 4px 10px 10px 4px;
+                    transform: translateZ(-20px);
+                    box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+                }
+
+                @keyframes coverOpen {
+                    0% { transform: rotateY(0deg); }
+                    100% { transform: rotateY(-160deg); }
+                }
+                @keyframes pageFlip {
+                    0% { transform: rotateY(0deg); }
+                    100% { transform: rotateY(-155deg); }
+                }
+                @keyframes bookFloat {
+                    0%, 100% { transform: rotateX(10deg) translateY(0); }
+                    50% { transform: rotateX(10deg) translateY(-10px); }
                 }
             `}</style>
 
@@ -103,10 +116,10 @@ const Preloader = ({ progress, message }) => {
                     <div className="book-wrapper">
                         <div className="book">
                             <div className="book-cover"></div>
-                            <div className="book-spine"></div>
                             <div className="book-page"></div>
                             <div className="book-page"></div>
                             <div className="book-page"></div>
+                            <div className="book-back"></div>
                         </div>
                     </div>
 

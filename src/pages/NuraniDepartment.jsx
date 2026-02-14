@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import logo from '../assets/logo.png'
-import { Users, GraduationCap, Filter, Search } from 'lucide-react'
+import { Users, GraduationCap, Filter, Search, ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const NuraniDepartment = () => {
+    const navigate = useNavigate()
     const [students, setStudents] = useState([])
     const [loading, setLoading] = useState(true)
     const [selectedClass, setSelectedClass] = useState('All')
@@ -50,7 +52,12 @@ const NuraniDepartment = () => {
                 </div>
 
                 <div className="container mx-auto px-4 relative z-10">
-                    <div className="flex flex-col items-center justify-center text-center">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="absolute top-0 left-4 md:left-0 flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold z-50">
+                        <ArrowLeft size={20} /> ফিরে যান
+                    </button>
+                    <div className="flex flex-col items-center justify-center text-center mt-8">
                         <div className="flex items-center gap-4 mb-6 bg-slate-900/50 p-4 rounded-2xl border border-white/5 backdrop-blur-sm shadow-xl">
                             <img src={logo} alt="Madrasha Logo" className="w-16 h-16 object-contain" />
                             <h1 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
@@ -83,18 +90,19 @@ const NuraniDepartment = () => {
                         <span>ফিল্টার করুন:</span>
                     </div>
 
-                    <div className="w-full md:w-64">
-                        <select
-                            value={selectedClass}
-                            onChange={(e) => setSelectedClass(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-3 outline-none transition-all"
-                        >
-                            {classes.map((cls) => (
-                                <option key={cls} value={cls}>
-                                    {cls === 'All' ? 'সকল ক্লাস' : cls}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="w-full md:w-auto flex flex-wrap gap-2">
+                        {['All', 'শিশু শ্রেণি', '১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি'].map((cls) => (
+                            <button
+                                key={cls}
+                                onClick={() => setSelectedClass(cls)}
+                                className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${selectedClass === cls
+                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                                    }`}
+                            >
+                                {cls === 'All' ? 'সকল ক্লাস' : cls}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -105,9 +113,9 @@ const NuraniDepartment = () => {
                         <p className="text-slate-400 animate-pulse">তথ্য লোড হচ্ছে...</p>
                     </div>
                 ) : (
-                    /* Student Grid */
                     <AnimatePresence>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {/* Student Grid - 3 Columns Mobile & Desktop */}
+                        <div className="grid grid-cols-3 gap-3 md:gap-6">
                             {filteredStudents.length > 0 ? (
                                 filteredStudents.map((student, index) => (
                                     <motion.div
@@ -115,12 +123,12 @@ const NuraniDepartment = () => {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className="bg-slate-800/50 border border-white/5 rounded-2xl p-6 hover:bg-slate-800 hover:border-emerald-500/30 transition-all duration-300 group relative overflow-hidden"
+                                        className="bg-slate-800/50 border border-white/5 rounded-xl md:rounded-2xl p-2 md:p-6 hover:bg-slate-800 hover:border-emerald-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col items-center"
                                     >
-                                        <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-bl-full group-hover:bg-emerald-500/10 transition-colors" />
+                                        <div className="absolute top-0 right-0 w-10 h-10 md:w-20 md:h-20 bg-emerald-500/5 rounded-bl-full group-hover:bg-emerald-500/10 transition-colors" />
 
-                                        <div className="flex flex-col items-center text-center relative z-10">
-                                            <div className="w-24 h-24 rounded-full border-2 border-emerald-500/30 p-1 mb-4 overflow-hidden bg-slate-900 group-hover:border-emerald-400 transition-colors">
+                                        <div className="flex flex-col items-center text-center relative z-10 w-full">
+                                            <div className="w-12 h-12 md:w-24 md:h-24 rounded-full border border-emerald-500/30 p-0.5 md:p-1 mb-2 md:mb-4 overflow-hidden bg-slate-900 group-hover:border-emerald-400 transition-colors">
                                                 <img
                                                     src={student.imageUrl || logo}
                                                     alt={student.name}
@@ -128,13 +136,13 @@ const NuraniDepartment = () => {
                                                 />
                                             </div>
 
-                                            <h3 className="text-xl font-bold text-white mb-1">{student.name}</h3>
-                                            <div className="inline-block px-3 py-1 rounded-full bg-slate-950 border border-slate-700 text-xs font-bold text-slate-300 mb-3">
+                                            <h3 className="text-[10px] md:text-xl font-bold text-white mb-1 leading-tight line-clamp-1">{student.name}</h3>
+                                            <div className="inline-block px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-slate-950 border border-slate-700 text-[8px] md:text-xs font-bold text-slate-300 mb-2 md:mb-3">
                                                 রোল: {student.roll}
                                             </div>
 
-                                            <div className="w-full pt-3 border-t border-white/5 flex justify-between items-center text-sm">
-                                                <span className="text-slate-500">শ্রেণি:</span>
+                                            <div className="w-full pt-2 md:pt-3 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[8px] md:text-sm gap-1 md:gap-0">
+                                                <span className="text-slate-500 hidden md:inline">শ্রেণি:</span>
                                                 <span className="text-emerald-400 font-bold">{student.class}</span>
                                             </div>
                                         </div>
@@ -150,7 +158,7 @@ const NuraniDepartment = () => {
                     </AnimatePresence>
                 )}
             </div>
-        </div>
+        </div >
     )
 }
 

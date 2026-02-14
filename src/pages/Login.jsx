@@ -5,7 +5,7 @@ import { Eye, EyeOff, Lock, User, AlertCircle, ArrowLeft, Clock, ShieldAlert, Ar
 import logo from '../assets/logo.png'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, db } from '../firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
 
 // Custom Popup Component for Login
 const LoginPopup = ({ isOpen, title, message, onClose }) => {
@@ -199,8 +199,36 @@ const Login = () => {
 
             setLoading(false)
 
+            setLoading(false)
+
         } catch (err) {
             console.error("Login Error:", err)
+
+            // Try Nurani Student Login (Manual Auth)
+            try {
+                const q = query(
+                    collection(db, 'nurani_students'),
+                    where('login_mobile', '==', formData.email), // Assuming user entered mobile in email field
+                    where('password', '==', formData.password)
+                )
+                const querySnapshot = await getDocs(q)
+
+                if (!querySnapshot.empty) {
+                    const studentData = querySnapshot.docs[0].data()
+
+                    setPopup({
+                        isOpen: true,
+                        title: 'স্বাগতম!',
+                        message: `প্রিয় শিক্ষার্থী ${studentData.name}, আসসালামু আলাইকুম। আপনাকে স্বাগতম।`,
+                        targetPath: '/nurani-department' // Redirect to Public View as per instructions
+                    })
+                    setLoading(false)
+                    return // Stop execution here
+                }
+            } catch (subErr) {
+                console.error("Nurani Auth Error:", subErr)
+            }
+
             handleFailedAttempt()
             const msg = err.code === 'auth/network-request-failed'
                 ? 'ইন্টারনেট সংযোগ পরীক্ষা করুন।'

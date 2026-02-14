@@ -11,7 +11,7 @@ import {
     Users, Bell, CheckCircle, XCircle, LayoutDashboard, Megaphone,
     Trash2, Clock, ShieldCheck, FileText, Send, Loader, UserPlus,
     Settings, LogOut, Menu, X, Undo, Phone, MapPin, Award, UserCheck, Smartphone,
-    Image as ImageIcon, Calendar, Star, AlertTriangle, Key, Download, Eye, FileBadge, ArrowLeft, BookOpen
+    Image as ImageIcon, Calendar, Star, AlertTriangle, Key, Download, Eye, FileBadge, ArrowLeft, BookOpen, Filter
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -333,6 +333,8 @@ const AdminDashboard = () => {
     const [loadingMessage, setLoadingMessage] = useState('') // New State for Dynamic Loading Message
     const [uploadProgress, setUploadProgress] = useState(0) // New State for Upload Progress
     const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success' })
+    const [nuraniResetId, setNuraniResetId] = useState(null)
+    const [newNuraniPass, setNewNuraniPass] = useState('')
 
     // Action Modal States
     const [detailModal, setDetailModal] = useState({ isOpen: false, data: null })
@@ -497,6 +499,67 @@ const AdminDashboard = () => {
             fetchAdditionalData()
         } catch (error) {
             setPopup({ isOpen: true, title: 'সমস্যা!', message: 'মুছে ফেলা সম্ভব হয়নি।', type: 'error' })
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
+        }
+    }
+
+    const handleNuraniResetSave = async (id) => {
+        if (!newNuraniPass || newNuraniPass.length < 6) {
+            toast.error("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+            return;
+        }
+        setLoadingMessage('পাসওয়ার্ড আপডেট হচ্ছে...');
+        setLoading(true);
+        try {
+            await updateDoc(doc(db, 'nurani_students', id), {
+                password: newNuraniPass,
+                updatedAt: serverTimestamp()
+            });
+            setPopup({ isOpen: true, title: 'সফল!', message: 'পাসওয়ার্ড সফলভাবে রিসেট করা হয়েছে।', type: 'success' });
+            setNuraniResetId(null);
+            setNewNuraniPass('');
+            fetchAdditionalData();
+        } catch (error) {
+            console.error(error);
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'পাসওয়ার্ড আপডেট করা যায়নি।', type: 'error' });
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
+        }
+    }
+
+    const handleUpdate = async (collectionName, id, data) => {
+        setLoadingMessage('তথ্য আপডেট হচ্ছে...');
+        setLoading(true);
+        try {
+            let imageUrl = data.imageUrl; // Keep existing by default
+            if (file) {
+                try {
+                    imageUrl = await uploadToImgBB(file);
+                } catch (uploadError) {
+                    console.error("Image Upload Failed:", uploadError);
+                    toast.error("ছবি আপলোড ব্যর্থ হয়েছে, তবে টেক্সট আপডেট হবে।");
+                }
+            }
+
+            const updatePayload = {
+                ...data,
+                ...(imageUrl && { imageUrl }),
+                updatedAt: serverTimestamp()
+            };
+
+            await updateDoc(doc(db, collectionName, id), updatePayload);
+
+            setPopup({ isOpen: true, title: 'সফল!', message: 'তথ্য সফলভাবে আপডেট হয়েছে।', type: 'success' });
+            setFormData({});
+            setFile(null);
+            setPreviewImage(null);
+            fetchAdditionalData();
+        } catch (error) {
+            console.error(error);
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: 'আপডেট করা সম্ভব হয়নি।', type: 'error' });
         } finally {
             setLoading(false);
             setLoadingMessage('');
@@ -1447,46 +1510,104 @@ const AdminDashboard = () => {
                 {/* --- Nurani Section (New) --- */}
                 {activeTab === 'nurani' && (
                     <Section title="নূরানী বিভাগ ম্যানেজমেন্ট">
-                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('nurani_students', formData, true); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
-                            <Input placeholder="শিক্ষার্থীর নাম" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
-                            <Input placeholder="রোল নম্বর" value={formData.roll || ''} onChange={e => setFormData({ ...formData, roll: e.target.value })} required />
+                        <div className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                            <h3 className="text-lg font-bold text-emerald-400 border-b border-white/10 pb-2 mb-4">
+                                {formData.editMode ? 'তথ্য হালনাগাদ করুন' : 'নতুন শিক্ষার্থী নিবন্ধন'}
+                            </h3>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                const pass = formData.password;
+                                if (!formData.editMode && (!pass || pass.length < 6)) {
+                                    toast.error("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+                                    return;
+                                }
+                                if (formData.editMode && pass && pass.length > 0 && pass.length < 6) {
+                                    toast.error("নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+                                    return;
+                                }
+                                if (formData.editMode && formData.id) {
+                                    handleUpdate('nurani_students', formData.id, formData);
+                                } else {
+                                    handleAdd('nurani_students', formData, true);
+                                }
+                            }} className="space-y-4">
+                                {/* Basic Info */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input placeholder="শিক্ষার্থীর নাম" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                                    <Input placeholder="রোল নম্বর" value={formData.roll || ''} onChange={e => setFormData({ ...formData, roll: e.target.value })} required />
+                                    <Input placeholder="জন্ম নিবন্ধন নম্বর" value={formData.birth_reg || ''} onChange={e => setFormData({ ...formData, birth_reg: e.target.value })} />
+                                    <select
+                                        value={formData.class || ''}
+                                        onChange={e => setFormData({ ...formData, class: e.target.value })}
+                                        className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-indigo-500"
+                                        required
+                                    >
+                                        <option value="">ক্লাস নির্বাচন করুন</option>
+                                        {['শিশু শ্রেণি', '১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
 
-                            <div className="space-y-1">
-                                <label className="text-xs text-slate-500 font-bold block">শ্রেণি সিলেক্ট করুন</label>
-                                <select
-                                    value={formData.class || ''}
-                                    onChange={e => setFormData({ ...formData, class: e.target.value })}
-                                    className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-indigo-500"
-                                    required
-                                >
-                                    <option value="">ক্লাস নির্বাচন করুন</option>
-                                    {['শিশু শ্রেণি', '১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
-                            </div>
+                                {/* Guardian Info */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Input placeholder="অভিভাবকের নাম" value={formData.guardian_name || ''} onChange={e => setFormData({ ...formData, guardian_name: e.target.value })} />
+                                    <Input placeholder="অভিভাবকের NID" value={formData.guardian_nid || ''} onChange={e => setFormData({ ...formData, guardian_nid: e.target.value })} />
+                                    <Input placeholder="মোবাইল নম্বর (যোগাযোগ)" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                                    <Input placeholder="সম্পর্ক (পিতা/মাতা/ভাই)" value={formData.relation || ''} onChange={e => setFormData({ ...formData, relation: e.target.value })} />
+                                </div>
 
-                            <div className="space-y-1">
-                                <label className="text-xs text-slate-500 font-bold block">ছবি আপলোড (WebP, Max 150KB)</label>
-                                <input
-                                    type="file"
-                                    onChange={async e => {
-                                        if (e.target.files[0]) {
-                                            const rawFile = e.target.files[0];
-                                            try {
-                                                const compressed = await compressImage(rawFile);
-                                                setFile(compressed);
-                                            } catch (err) {
-                                                console.error("Compression Error:", err);
-                                                setFile(rawFile);
+                                {/* Address */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <textarea placeholder="বর্তমান ঠিকানা" value={formData.present_address || ''} onChange={e => setFormData({ ...formData, present_address: e.target.value })} className="bg-slate-800 border border-white/10 rounded-xl p-3 text-white w-full" />
+                                    <textarea placeholder="স্থায়ী ঠিকানা" value={formData.permanent_address || ''} onChange={e => setFormData({ ...formData, permanent_address: e.target.value })} className="bg-slate-800 border border-white/10 rounded-xl p-3 text-white w-full" />
+                                </div>
+
+                                {/* Login Info */}
+                                <div className="p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20 space-y-3">
+                                    <h4 className="text-sm font-bold text-indigo-300">লগইন তথ্য (শিক্ষার্থীর জন্য)</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Input placeholder="লগইন মোবাইল নম্বর" value={formData.login_mobile || ''} onChange={e => setFormData({ ...formData, login_mobile: e.target.value })} required />
+                                        <Input placeholder="পাসওয়ার্ড" value={formData.password || ''} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
+                                    </div>
+                                </div>
+
+                                {/* Image */}
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500 font-bold block">ছবি আপলোড (WebP, Max 150KB)</label>
+                                    <input
+                                        type="file"
+                                        onChange={async e => {
+                                            if (e.target.files[0]) {
+                                                const rawFile = e.target.files[0];
+                                                try {
+                                                    const compressed = await compressImage(rawFile);
+                                                    setFile(compressed);
+                                                } catch (err) {
+                                                    console.error("Compression Error:", err);
+                                                    setFile(rawFile);
+                                                }
                                             }
-                                        }
-                                    }}
-                                    className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
-                                    accept="image/*"
-                                    required
-                                />
-                            </div>
-                            <button disabled={loading} className="w-full bg-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-500/20">{loading ? 'যুক্ত হচ্ছে...' : '+ নূরানী শিক্ষার্থী যুক্ত করুন'}</button>
-                        </form>
+                                        }}
+                                        className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                        accept="image/*"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button disabled={loading} className="flex-1 bg-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-500/20">
+                                        {loading ? 'প্রসেসিং...' : (formData.editMode ? 'তথ্য আপডেট করুন' : 'শিক্ষার্থী যুক্ত করুন')}
+                                    </button>
+                                    {formData.editMode && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({})}
+                                            className="px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-slate-300"
+                                        >
+                                            বাতিল
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
 
                         <div className="bg-white/5 rounded-2xl border border-white/10 p-6 mb-6">
                             <div className="flex items-center gap-2 mb-4">
@@ -1507,19 +1628,47 @@ const AdminDashboard = () => {
                                     ?.filter(n => !selectedClass || n.class === selectedClass)
                                     .map(n => (
                                         <div key={n.id} className="bg-slate-800/50 p-4 rounded-xl border border-white/5 flex items-center gap-4 group hover:bg-slate-800 hover:border-indigo-500/30 transition-all">
-                                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-500/30 shrink-0">
-                                                <img src={n.imageUrl || logo} className="w-full h-full object-cover" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-bold text-white truncate">{n.name}</h4>
-                                                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                                                    <span className="bg-white/10 px-2 py-0.5 rounded text-indigo-300">{n.class}</span>
-                                                    <span>Roll: {n.roll}</span>
+                                            {nuraniResetId === n.id ? (
+                                                <div className="flex-1 flex flex-col gap-2 animate-pulse">
+                                                    <label className="text-xs text-indigo-300 font-bold">নতুন পাসওয়ার্ড সেট করুন:</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="text"
+                                                            value={newNuraniPass}
+                                                            onChange={e => setNewNuraniPass(e.target.value)}
+                                                            placeholder="New Password (min 6)"
+                                                            className="bg-slate-900 border border-indigo-500 rounded-lg px-3 py-2 text-white text-sm w-full outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                        />
+                                                        <button onClick={() => handleNuraniResetSave(n.id)} className="p-2 bg-emerald-600 rounded-lg text-white hover:bg-emerald-500"><CheckCircle size={18} /></button>
+                                                        <button onClick={() => { setNuraniResetId(null); setNewNuraniPass('') }} className="p-2 bg-rose-600 rounded-lg text-white hover:bg-rose-500"><X size={18} /></button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <button onClick={() => handleDelete('nurani_students', n.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors">
-                                                <Trash2 size={16} />
-                                            </button>
+                                            ) : (
+                                                <>
+                                                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-500/30 shrink-0">
+                                                        <img src={n.imageUrl || logo} className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-bold text-white truncate">{n.name}</h4>
+                                                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                                                            <span className="bg-white/10 px-2 py-0.5 rounded text-indigo-300">{n.class}</span>
+                                                            <span>Roll: {n.roll}</span>
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1"><Smartphone size={10} /> {n.login_mobile}</p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2">
+                                                        <button onClick={() => setFormData({ ...n, editMode: true })} className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg hover:bg-emerald-500 hover:text-white transition-colors" title="Edit Info">
+                                                            <FileText size={16} />
+                                                        </button>
+                                                        <button onClick={() => { setNuraniResetId(n.id); setNewNuraniPass('') }} className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg hover:bg-indigo-500 hover:text-white transition-colors" title="Reset Password">
+                                                            <Key size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleDelete('nurani_students', n.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors" title="Delete">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
                                 {nuraniList?.filter(n => !selectedClass || n.class === selectedClass).length === 0 && <EmptyState msg="কোনো শিক্ষার্থী পাওয়া যায়নি।" />}
