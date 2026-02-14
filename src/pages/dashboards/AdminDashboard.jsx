@@ -358,6 +358,7 @@ const AdminDashboard = () => {
     const [activeMemberTab, setActiveMemberTab] = useState('committee')
     const [events, setEvents] = useState([])
     const [hifzList, setHifzList] = useState([])
+    const [nuraniList, setNuraniList] = useState([])
     const [admins, setAdmins] = useState([])
     const [settings, setSettings] = useState({})
 
@@ -416,6 +417,9 @@ const AdminDashboard = () => {
         const hifzSnap = await getDocs(query(collection(db, 'hifz_department'), orderBy('createdAt', 'desc')))
         setHifzList(hifzSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
+        const nuraniSnap = await getDocs(query(collection(db, 'nurani_students'), orderBy('createdAt', 'desc')))
+        setNuraniList(nuraniSnap.docs.map(d => ({ id: d.id, ...d.data() })))
+
         const admSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'admin')))
         setAdmins(admSnap.docs.map(d => ({ id: d.id, ...d.data() })))
 
@@ -449,7 +453,9 @@ const AdminDashboard = () => {
             'success_students': 'সফল শিক্ষার্থী',
             'events': 'ইভেন্ট',
             'achievements': 'অর্জন',
-            'hifz_department': 'হাফেজ'
+            'achievements': 'অর্জন',
+            'hifz_department': 'হাফেজ',
+            'nurani_students': 'নূরানী শিক্ষার্থী'
         };
         const subjectName = nameMap[collectionName] || 'আইটেম';
 
@@ -1027,6 +1033,7 @@ const AdminDashboard = () => {
                             <SidebarItem id="teachers" icon={<Award size={18} />} label="শিক্ষক ম্যানেজমেন্ট" />
                             <SidebarItem id="notices" icon={<Bell size={18} />} label="নোটিশ বোর্ড" />
                             <SidebarItem id="routine" icon={<Calendar size={18} />} label="রুটিন পাবলিশ" />
+                            <SidebarItem id="nurani" icon={<UserPlus size={18} />} label="নূরানী বিভাগ" />
                             <SidebarItem id="hifz" icon={<BookOpen size={18} />} label="হিফজ বিভাগ" />
                             <SidebarItem id="success" icon={<Star size={18} />} label="সাফল্য গাঁথা" />
                             <SidebarItem id="committee" icon={<Users size={18} />} label="কমিটি ও স্মরণীয়" />
@@ -1433,6 +1440,90 @@ const AdminDashboard = () => {
                                 </div>
                             ))}
                             {hifzList.length === 0 && <EmptyState msg="কোনো হাফেজের তথ্য নেই।" />}
+                        </div>
+                    </Section>
+                )}
+
+                {/* --- Nurani Section (New) --- */}
+                {activeTab === 'nurani' && (
+                    <Section title="নূরানী বিভাগ ম্যানেজমেন্ট">
+                        <form onSubmit={(e) => { e.preventDefault(); handleAdd('nurani_students', formData, true); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                            <Input placeholder="শিক্ষার্থীর নাম" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                            <Input placeholder="রোল নম্বর" value={formData.roll || ''} onChange={e => setFormData({ ...formData, roll: e.target.value })} required />
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500 font-bold block">শ্রেণি সিলেক্ট করুন</label>
+                                <select
+                                    value={formData.class || ''}
+                                    onChange={e => setFormData({ ...formData, class: e.target.value })}
+                                    className="w-full bg-slate-800 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-indigo-500"
+                                    required
+                                >
+                                    <option value="">ক্লাস নির্বাচন করুন</option>
+                                    {['শিশু শ্রেণি', '১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500 font-bold block">ছবি আপলোড (WebP, Max 150KB)</label>
+                                <input
+                                    type="file"
+                                    onChange={async e => {
+                                        if (e.target.files[0]) {
+                                            const rawFile = e.target.files[0];
+                                            try {
+                                                const compressed = await compressImage(rawFile);
+                                                setFile(compressed);
+                                            } catch (err) {
+                                                console.error("Compression Error:", err);
+                                                setFile(rawFile);
+                                            }
+                                        }
+                                    }}
+                                    className="w-full bg-white/5 rounded-lg p-2 text-sm text-slate-400"
+                                    accept="image/*"
+                                    required
+                                />
+                            </div>
+                            <button disabled={loading} className="w-full bg-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-500 shadow-lg shadow-indigo-500/20">{loading ? 'যুক্ত হচ্ছে...' : '+ নূরানী শিক্ষার্থী যুক্ত করুন'}</button>
+                        </form>
+
+                        <div className="bg-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Filter size={18} className="text-indigo-400" />
+                                <span className="text-sm font-bold text-slate-400">ফিল্টার করুন:</span>
+                                <select
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    className="bg-slate-800 border-2 border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-white outline-none focus:border-indigo-500"
+                                >
+                                    <option value="">সকল শ্রেণি</option>
+                                    {['শিশু শ্রেণি', '১ম শ্রেণি', '২য় শ্রেণি', '৩য় শ্রেণি'].map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {nuraniList
+                                    ?.filter(n => !selectedClass || n.class === selectedClass)
+                                    .map(n => (
+                                        <div key={n.id} className="bg-slate-800/50 p-4 rounded-xl border border-white/5 flex items-center gap-4 group hover:bg-slate-800 hover:border-indigo-500/30 transition-all">
+                                            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-500/30 shrink-0">
+                                                <img src={n.imageUrl || logo} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="font-bold text-white truncate">{n.name}</h4>
+                                                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                                                    <span className="bg-white/10 px-2 py-0.5 rounded text-indigo-300">{n.class}</span>
+                                                    <span>Roll: {n.roll}</span>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => handleDelete('nurani_students', n.id)} className="p-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white transition-colors">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                {nuraniList?.filter(n => !selectedClass || n.class === selectedClass).length === 0 && <EmptyState msg="কোনো শিক্ষার্থী পাওয়া যায়নি।" />}
+                            </div>
                         </div>
                     </Section>
                 )}

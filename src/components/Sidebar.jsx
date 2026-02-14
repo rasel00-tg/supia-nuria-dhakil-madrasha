@@ -10,7 +10,8 @@ import {
     Menu,
     X,
     GraduationCap,
-    FileText // Imported for Admission icon
+    FileText, // Imported for Admission icon
+    Sun // Imported for Nurani Department icon
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import logo from '../assets/logo.png'
@@ -27,6 +28,7 @@ const Sidebar = () => {
     const navItems = [
         { label: 'হোম', path: '/', icon: Home },
         { label: 'অনলাইন ভর্তি', path: '/admission', icon: FileText }, // Added Admission Link
+        { label: 'নূরানী বিভাগ', path: '/nurani-department', icon: Sun },
         { label: 'হিফজ বিভাগ', path: '/hifz', icon: BookOpen },
         { label: 'সাংস্কৃতিক ও খেলাধুলা', path: '/events', icon: Trophy },
         { label: 'শিক্ষক পরিচিতি', path: '/teachers', icon: Users },

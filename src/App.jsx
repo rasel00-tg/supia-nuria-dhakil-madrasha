@@ -24,6 +24,7 @@ import AdminDashboard from './pages/dashboards/AdminDashboard'
 import TeacherDashboard from './pages/dashboards/TeacherDashboard'
 import StudentDashboard from './pages/dashboards/StudentDashboard'
 import HifzList from './pages/HifzList'
+import NuraniDepartment from './pages/NuraniDepartment'
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -53,6 +54,8 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
         return () => clearTimeout(timer);
     }, [location.pathname]);
 
+    const { loadingMessage } = useContext(AuthContext) || {};
+
     const showLoader = loading || isPageLoading;
 
     const getDashboardRoute = () => {
@@ -65,7 +68,7 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
     return (
         <div className="relative min-h-screen flex flex-col">
             <ScrollToTop />
-            {showLoader && <Preloader />}
+            {showLoader && <Preloader message={loadingMessage} />}
             <Toaster position="top-right" />
 
             {/* Sidebar only for non-dashboard pages and not login, managing layout manually for dashboard if needed */}
@@ -90,6 +93,7 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
                     <Route path="/teachers" element={<TeachersList />} />
                     <Route path="/routine" element={<Routine />} />
                     <Route path="/hifz" element={<HifzList />} />
+                    <Route path="/nurani-department" element={<NuraniDepartment />} />
                     <Route path="/admission" element={<Admission />} />
                     <Route path="/admission-info" element={<AdmissionInfo />} />
                     <Route path="/gallery" element={<Gallery />} />
@@ -131,6 +135,7 @@ const App = () => {
     const [role, setRole] = useState(null)
     const [isAuthChecking, setIsAuthChecking] = useState(true)
     const [showWelcome, setShowWelcome] = useState(false)
+    const [loadingMessage, setLoadingMessage] = useState('')
 
     useEffect(() => {
         // Welcome Screen Logic - Show only once per session
@@ -235,7 +240,7 @@ const App = () => {
     }
 
     return (
-        <AuthContext.Provider value={{ user, role, loading: isAuthChecking }}>
+        <AuthContext.Provider value={{ user, role, loading: isAuthChecking, setLoading, loadingMessage, setLoadingMessage }}>
             <Router>
                 <AppContent
                     loading={loading || isAuthChecking}

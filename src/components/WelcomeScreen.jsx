@@ -21,13 +21,10 @@ const WelcomeScreen = ({ onComplete }) => {
                     initial={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="fixed inset-0 h-screen w-full z-[99999] flex flex-col items-center justify-center font-bengali p-4 text-center"
+                    className="fixed inset-0 h-[100dvh] w-full z-[99999] flex flex-col items-center justify-center font-bengali p-4 text-center bg-cover bg-center bg-no-repeat"
                     style={{
-                        backgroundImage: `url('/assets/welcome.png?v=${new Date().getTime()}')`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundColor: 'transparent'
+                        backgroundImage: `url('/welcome.png')`,
+                        backgroundColor: '#020617' // Fallback color
                     }}
                 >
                     {/* Dark Overlay */}
