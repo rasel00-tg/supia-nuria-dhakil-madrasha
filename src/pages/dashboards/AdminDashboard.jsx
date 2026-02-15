@@ -44,20 +44,48 @@ const LockScreen = ({ storedCode, onUnlock, onLogout }) => {
     const [code, setCode] = useState(['', '', '', '', '', '']);
     const inputRefs = useRef([]);
     const [status, setStatus] = useState('idle'); // idle, success, error
+    const [loginMode, setLoginMode] = useState('pin'); // 'pin' or 'password'
+    const [loginData, setLoginData] = useState({ email: auth.currentUser?.email || '', password: '' });
+    const [loading, setLoading] = useState(false);
 
     const verify = (inputCode) => {
         if (inputCode === storedCode) {
             setStatus('success');
             setTimeout(() => {
                 onUnlock();
-            }, 1000);
+            }, 500);
         } else {
             setStatus('error');
             setTimeout(() => {
                 setCode(['', '', '', '', '', '']);
                 setStatus('idle');
-                inputRefs.current[0].focus();
-            }, 1500);
+                if (inputRefs.current[0]) inputRefs.current[0].focus();
+            }, 1000);
+        }
+    };
+
+    const handlePasswordLogin = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                // Determine if we need to re-auth or just sign in
+                // Since this is lock screen, user is technically logged in contextually
+                const credential = EmailAuthProvider.credential(loginData.email, loginData.password);
+                await reauthenticateWithCredential(user, credential);
+            } else {
+                // Fallback if session somehow lost but this screen is showing
+                await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
+            }
+            setStatus('success');
+            setTimeout(() => {
+                onUnlock();
+            }, 500);
+        } catch (error) {
+            console.error(error);
+            toast.error('পাসওয়ার্ড ভুল বা ইমেইল সঠিক নয়');
+            setLoading(false);
         }
     };
 
@@ -67,6 +95,7 @@ const LockScreen = ({ storedCode, onUnlock, onLogout }) => {
         newCode[index] = value;
         setCode(newCode);
 
+        // Mobile optimization: Auto-focus next
         if (value && index < 5) {
             inputRefs.current[index + 1].focus();
         }
@@ -94,9 +123,10 @@ const LockScreen = ({ storedCode, onUnlock, onLogout }) => {
                 @keyframes coverOpen { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(-160deg); } }
                 @keyframes pageFlip { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(-155deg); } }
                 @keyframes bookFloat { 0%, 100% { transform: rotateX(10deg) translateY(0); } 50% { transform: rotateX(10deg) translateY(-5px); } }
+                /* input[type="tel"] { -webkit-text-security: disc; } */
             `}</style>
 
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center gap-8 text-center p-8 rounded-3xl bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center gap-8 text-center p-8 rounded-3xl bg-white/5 border border-white/10 shadow-2xl relative overflow-hidden max-w-sm w-full">
 
                 {/* Logo & Header */}
                 <div className="flex flex-row items-center justify-center gap-4 mb-4 z-10">
@@ -123,36 +153,76 @@ const LockScreen = ({ storedCode, onUnlock, onLogout }) => {
                         <h3 className="text-xl font-bold text-rose-500 animate-bounce">শর্টকোড ভুল</h3>
                     ) : (
                         <>
-                            <h3 className="text-xl font-bold text-emerald-400">অ্যাডমিন প্যানেল লকড</h3>
-                            <p className="text-slate-400 text-sm">প্রবেশ করতে ৬ সংখ্যার পিন দিন</p>
+                            {loginMode === 'pin' ? (
+                                <>
+                                    <h3 className="text-xl font-bold text-emerald-400">অ্যাডমিন প্যানেল লক</h3>
+                                    <p className="text-slate-400 text-sm">প্রবেশ করতে ৬ সংখ্যার পিন দিন</p>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="text-xl font-bold text-emerald-400">বিকল্প লগইন</h3>
+                                    <p className="text-slate-400 text-sm">পাসওয়ার্ড দিয়ে প্রবেশ করুন</p>
+                                </>
+                            )}
                         </>
                     )}
                 </div>
 
-                <div className="flex gap-2 md:gap-4 my-4 z-10">
-                    {code.map((digit, index) => (
+                {loginMode === 'pin' ? (
+                    <>
+                        <div className="flex gap-2 justify-center my-4 z-10">
+                            {code.map((digit, index) => (
+                                <input
+                                    key={index}
+                                    ref={el => inputRefs.current[index] = el}
+                                    type="tel"
+                                    inputMode="numeric"
+                                    maxLength={1}
+                                    value={digit}
+                                    onChange={(e) => handleChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleKeyDown(index, e)}
+                                    disabled={status === 'success'}
+                                    disabled={status === 'success'}
+                                    style={{ WebkitTextSecurity: 'disc' }}
+                                    className={`w-10 h-12 md:w-12 md:h-14 bg-slate-800 border-2 ${status === 'error' ? 'border-rose-500 text-rose-500' : 'border-slate-700 text-white'} rounded-lg text-center text-xl md:text-2xl font-bold focus:border-emerald-500 focus:outline-none transition-all`}
+                                />
+                            ))}
+                        </div>
+                        <div className="flex flex-col gap-3 w-full z-10">
+                            <button onClick={() => verify(code.join(''))} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-white shadow-lg shadow-emerald-500/20 transition-all">
+                                {status === 'success' ? 'আনলক হচ্ছে...' : 'আনলক করুন'}
+                            </button>
+                            <button onClick={() => setLoginMode('password')} className="text-xs text-rose-400 hover:text-rose-300 font-bold mt-2">
+                                পিন ভুলে গেছেন? পাসওয়ার্ড দিয়ে লগইন করুন
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <form onSubmit={handlePasswordLogin} className="w-full flex flex-col gap-4 z-10 animate-in slide-in-from-right-4 fade-in">
                         <input
-                            key={index}
-                            ref={el => inputRefs.current[index] = el}
-                            type="password"
-                            maxLength={1}
-                            value={digit}
-                            onChange={(e) => handleChange(index, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(index, e)}
-                            disabled={status === 'success'}
-                            className={`w-10 h-12 md:w-12 md:h-14 bg-slate-800 border-2 ${status === 'error' ? 'border-rose-500 text-rose-500' : 'border-slate-700 text-white'} rounded-lg text-center text-xl md:text-2xl font-bold focus:border-emerald-500 focus:outline-none transition-all`}
+                            type="email"
+                            placeholder="অ্যাডমিন ইমেইল"
+                            value={loginData.email}
+                            onChange={e => setLoginData({ ...loginData, email: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none"
+                            required
                         />
-                    ))}
-                </div>
-
-                <div className="flex flex-col gap-3 w-full z-10">
-                    <button onClick={() => verify(code.join(''))} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-white shadow-lg shadow-emerald-500/20 transition-all">
-                        {status === 'success' ? 'আনলক হচ্ছে...' : 'আনলক করুন'}
-                    </button>
-                    <button onClick={onLogout} className="text-xs text-rose-400 hover:text-rose-300 font-bold mt-2">
-                        পিন ভুলে গেছেন? পাসওয়ার্ড দিয়ে লগইন করুন
-                    </button>
-                </div>
+                        <input
+                            type="password"
+                            placeholder="পাসওয়ার্ড"
+                            value={loginData.password}
+                            onChange={e => setLoginData({ ...loginData, password: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none"
+                            required
+                        />
+                        <button type="submit" disabled={loading} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-white shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center">
+                            {loading ? <Loader className="animate-spin" /> : 'লগইন করুন'}
+                        </button>
+                        <button type="button" onClick={() => setLoginMode('pin')} className="text-xs text-slate-400 hover:text-white font-bold mt-2">
+                            পিন ব্যবহার করুন
+                        </button>
+                    </form>
+                )}
             </motion.div>
         </div>
     )
