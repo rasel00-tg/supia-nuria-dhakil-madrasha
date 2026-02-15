@@ -1,14 +1,15 @@
 import React, { useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { AuthContext } from '../App'
 
 const BackButton = ({ className = "" }) => {
     const navigate = useNavigate()
+    const location = useLocation()
     const { role } = useContext(AuthContext)
 
     const handleBack = () => {
-        if (role === 'admin') {
+        if (role === 'admin' && location.pathname.startsWith('/admin')) {
             navigate('/admin')
         } else {
             navigate(-1)

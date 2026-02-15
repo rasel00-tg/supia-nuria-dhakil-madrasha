@@ -61,7 +61,7 @@ const MemorableList = () => {
                         className="inline-block relative"
                     >
                         <h2 className="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-400 pb-2">
-                            সকল স্মরণীয়বৃন্দ
+                            আমরা আপনাদের স্বরণ করি
                         </h2>
                         <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-indigo-400 rounded-full" />
                     </motion.div>

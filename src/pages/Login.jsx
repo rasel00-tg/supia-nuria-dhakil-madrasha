@@ -229,6 +229,31 @@ const Login = () => {
                 console.error("Nurani Auth Error:", subErr)
             }
 
+            // Try General Student (4th-10th) Login (Manual Auth for Admin added students)
+            try {
+                const q = query(
+                    collection(db, 'students'),
+                    where('login_mobile', '==', formData.email),
+                    where('password', '==', formData.password)
+                )
+                const querySnapshot = await getDocs(q)
+
+                if (!querySnapshot.empty) {
+                    const studentData = querySnapshot.docs[0].data()
+
+                    setPopup({
+                        isOpen: true,
+                        title: 'স্বাগতম!',
+                        message: `প্রিয় শিক্ষার্থী ${studentData.full_name || studentData.name}, আসসালামু আলাইকুম। আপনাকে স্বাগতম।`,
+                        targetPath: '/student'
+                    })
+                    setLoading(false)
+                    return
+                }
+            } catch (subErr) {
+                console.error("Student Auth Error:", subErr)
+            }
+
             handleFailedAttempt()
             const msg = err.code === 'auth/network-request-failed'
                 ? 'ইন্টারনেট সংযোগ পরীক্ষা করুন।'

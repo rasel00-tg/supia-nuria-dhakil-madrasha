@@ -27,6 +27,7 @@ import HifzList from './pages/HifzList'
 import NuraniDepartment from './pages/NuraniDepartment'
 import CommitteeList from './pages/CommitteeList'
 import MemorableList from './pages/MemorableList'
+import StudentsList from './pages/StudentsList'
 
 // Components
 import Sidebar from './components/Sidebar'
@@ -93,6 +94,7 @@ const AppContent = ({ loading, user, role, isAuthChecking }) => {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/notices" element={<Notices />} />
                     <Route path="/teachers" element={<TeachersList />} />
+                    <Route path="/students" element={<StudentsList />} />
                     <Route path="/routine" element={<Routine />} />
                     <Route path="/hifz" element={<HifzList />} />
                     <Route path="/nurani-department" element={<NuraniDepartment />} />

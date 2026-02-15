@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Book, Award, Bell, User, Calendar, ClipboardCheck, LogOut, CheckCircle, ChevronRight, Calculator, FileText, Check } from 'lucide-react'
+import { Book, Award, Bell, User, Calendar, ClipboardCheck, LogOut, CheckCircle, ChevronRight, Calculator, FileText, Check, ArrowLeft } from 'lucide-react'
 import { AuthContext } from '../../App'
 import logo from '../../assets/logo.png'
+import BackButton from '../../components/BackButton'
 import { auth, db } from '../../firebase'
-import { collection, query, orderBy, limit, onSnapshot, getDocs, where, updateDoc, doc, arrayUnion } from 'firebase/firestore'
+import { collection, query, orderBy, limit, onSnapshot, getDocs, where, updateDoc, doc, arrayUnion, getDoc } from 'firebase/firestore'
 
 const StudentDashboard = () => {
     const navigate = useNavigate()
@@ -70,6 +71,18 @@ const StudentDashboard = () => {
             if (user?.uid) {
                 // Real Firebase Data Fetching
                 try {
+                    // 1. Fetch Student Profile 
+                    const studentRef = doc(db, 'students', user.uid)
+                    const studentSnap = await getDoc(studentRef)
+                    if (studentSnap.exists()) {
+                        setUserProfile(studentSnap.data())
+                    } else {
+                        // Fallback: Check 'users' collection or use Auth defaults
+                        const userRef = doc(db, 'users', user.uid)
+                        const userSnap = await getDoc(userRef)
+                        if (userSnap.exists()) setUserProfile(userSnap.data())
+                    }
+
                     // Notices (Real-time)
                     const qNotices = query(collection(db, 'notices'), orderBy('date', 'desc'), limit(5))
                     const unsubNotices = onSnapshot(qNotices, (snapshot) => {
@@ -157,6 +170,11 @@ const StudentDashboard = () => {
             <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
                 <div className="container mx-auto px-4 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
+                        {/* New Back Button Direct to Home */}
+                        <Link to="/" className="w-10 h-10 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors mr-2">
+                            <ArrowLeft size={20} />
+                        </Link>
+
                         <img src={logo} alt="Logo" className="w-10 h-10 object-contain" />
                         <div>
                             <h1 className="font-black text-lg md:text-xl text-slate-800 leading-none">সুফিয়া নূরীয়া</h1>
@@ -166,7 +184,7 @@ const StudentDashboard = () => {
 
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex flex-col items-end mr-2">
-                            <span className="font-black text-sm text-slate-700">{user?.displayName || userProfile?.fullName || 'Student'}</span>
+                            <span className="font-black text-sm text-slate-700">{userProfile?.full_name || userProfile?.name || user?.displayName || 'Student'}</span>
                             <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{userProfile?.class || 'General'}</span>
                         </div>
                         <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold text-sm transition-colors border border-rose-100">
@@ -179,15 +197,34 @@ const StudentDashboard = () => {
             <main className="container mx-auto px-4 py-8 space-y-8">
 
                 {/* --- WELCOME BANNER --- */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-[32px] p-8 md:p-12 text-white shadow-2xl shadow-slate-900/10 relative overflow-hidden">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-[32px] p-6 md:p-12 text-white shadow-2xl shadow-slate-900/10 relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-                    <div className="relative z-10">
-                        <h2 className="text-2xl md:text-4xl font-black mb-2">শিক্ষার্থী একাউন্ট, স্বাগতম!</h2>
-                        <h3 className="text-xl md:text-2xl font-medium text-emerald-400 mb-6">{user?.displayName || 'Student'}</h3>
-                        <div className="flex flex-wrap gap-4">
-                            <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
-                                <User size={18} className="text-emerald-400" />
-                                <span className="font-bold text-sm">Class: {userProfile?.class || 'N/A'}</span>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 text-center md:text-left">
+                        {/* Profile Image - Fixed for Mobile */}
+                        {userProfile?.imageUrl ? (
+                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-emerald-500/30 overflow-hidden shadow-2xl shrink-0">
+                                <img src={userProfile.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                            </div>
+                        ) : (
+                            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-emerald-500/30 overflow-hidden shadow-2xl shrink-0 bg-slate-700 flex items-center justify-center">
+                                <User size={40} className="text-emerald-400" />
+                            </div>
+                        )}
+
+                        <div className="flex-1">
+                            <h2 className="text-xl md:text-4xl font-black mb-2">শিক্ষার্থী প্রোফাইল</h2>
+                            <h3 className="text-2xl md:text-3xl font-medium text-emerald-400 mb-6">
+                                {userProfile?.full_name || userProfile?.name || user?.displayName || 'Student'}
+                            </h3>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                                <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
+                                    <User size={18} className="text-emerald-400" />
+                                    <span className="font-bold text-sm">Class: {userProfile?.class || userProfile?.admission_class || 'N/A'}</span>
+                                </div>
+                                <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10">
+                                    <div className="text-emerald-400 font-black text-lg">#</div>
+                                    <span className="font-bold text-sm">Roll: {userProfile?.roll || 'N/A'}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -197,25 +234,31 @@ const StudentDashboard = () => {
 
                     {/* --- LEFT COLUMN: NOTICES & HW --- */}
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Notices */}
+                        {/* Notices - Reconnected & Real-time */}
                         <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-black flex items-center gap-2"><Bell className="text-amber-500" size={24} /> নোটিশ বোর্ড</h3>
                                 <Link to="/notices" className="text-sm font-bold text-slate-400 hover:text-emerald-600">সব দেখুন</Link>
                             </div>
                             <div className="space-y-4">
-                                {noticeList.length === 0 ? <p className="text-slate-400 text-sm font-bold">কোনো নোটিশ নেই</p> : noticeList.map((notice, idx) => (
-                                    <div key={notice.id} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-md transition-all group cursor-pointer">
-                                        <div className="flex flex-col items-center justify-center w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 shrink-0 group-hover:border-amber-200 group-hover:bg-amber-50 transition-colors">
-                                            <span className="text-xs font-black text-slate-400 uppercase">{new Date(notice.date).toLocaleString('default', { month: 'short' })}</span>
-                                            <span className="text-lg font-black text-slate-800">{new Date(notice.date).getDate()}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1 block">Notice #{idx + 1} • {notice.type || 'General'}</span>
-                                            <h4 className="font-bold text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{notice.title}</h4>
-                                        </div>
+                                {noticeList.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <Bell size={40} className="mx-auto text-slate-200 mb-3" />
+                                        <p className="text-slate-400 text-sm font-bold">কোনো নোটিশ নেই</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    noticeList.map((notice, idx) => (
+                                        <div key={notice.id || idx} className="flex gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-md transition-all group cursor-pointer">
+                                            <div className="flex flex-col items-center justify-center w-14 h-14 bg-white rounded-xl shadow-sm border border-slate-100 shrink-0 group-hover:border-amber-200 group-hover:bg-amber-50 transition-colors">
+                                                <span className="text-xs font-black text-slate-400 uppercase">{notice.date ? new Date(notice.date).toLocaleString('default', { month: 'short' }) : 'NOV'}</span>
+                                                <span className="text-lg font-black text-slate-800">{notice.date ? new Date(notice.date).getDate() : '01'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1 block">Notice #{idx + 1} • {notice.type || 'General'}</span>
+                                                <h4 className="font-bold text-slate-800 group-hover:text-emerald-700 transition-colors line-clamp-1">{notice.title || notice.notice_title}</h4>
+                                            </div>
+                                        </div>
+                                    )))}
                             </div>
                         </div>
 
