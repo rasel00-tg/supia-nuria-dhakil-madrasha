@@ -20,8 +20,8 @@ const Sidebar = () => {
     const [isOpen, setIsOpen] = useState(false)
     const location = useLocation()
 
-    // Hide sidebar on AI pages and Nurani Department page
-    if (location.pathname === '/ai-chat' || location.pathname === '/ai-memorial' || location.pathname === '/routine' || location.pathname === '/nurani-department' || location.pathname === '/hifz') {
+    // Hide sidebar on AI pages, Nurani Department, Committee, and Memorable pages
+    if (location.pathname === '/ai-chat' || location.pathname === '/ai-memorial' || location.pathname === '/routine' || location.pathname === '/nurani-department' || location.pathname === '/hifz' || location.pathname === '/committee' || location.pathname === '/memorable') {
         return null
     }
 

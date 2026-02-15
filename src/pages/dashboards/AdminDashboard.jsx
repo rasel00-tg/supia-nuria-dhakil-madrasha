@@ -434,13 +434,16 @@ const AdminDashboard = () => {
     // --- ImgBB Upload Helper ---
     const uploadToImgBB = async (file) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('image', file, file.name || 'image.webp');
         const API_KEY = 'E22c8bb3aff47463d2a22e38293bac01'; // User provided API Key
         const url = `https://api.imgbb.com/1/upload?key=${API_KEY}`;
         try {
             const response = await fetch(url, { method: 'POST', body: formData });
             const data = await response.json();
-            if (data.success) return data.data.url;
+            if (data.success) {
+                console.log("ImgBB Upload Success:", data.data.url);
+                return data.data.url;
+            }
             throw new Error(data.error?.message || 'ImgBB Upload Failed');
         } catch (error) {
             console.error("ImgBB Error:", error);
@@ -1725,8 +1728,8 @@ const AdminDashboard = () => {
                 {activeTab === 'committee' && (
                     <Section title="কমিটি ও স্মরণীয় ব্যক্তি">
                         <div className="flex gap-4 mb-4">
-                            <button onClick={() => { setActiveMemberTab('committee'); setFormData({}); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeMemberTab === 'committee' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>ম্যানেজিং কমিটি</button>
-                            <button onClick={() => { setActiveMemberTab('memorable'); setFormData({}); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeMemberTab === 'memorable' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>স্মরণীয় ব্যক্তি</button>
+                            <button onClick={() => { setActiveMemberTab('committee'); setFormData({}); setFile(null); setPreviewImage(null); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeMemberTab === 'committee' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>ম্যানেজিং কমিটি</button>
+                            <button onClick={() => { setActiveMemberTab('memorable'); setFormData({}); setFile(null); setPreviewImage(null); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${activeMemberTab === 'memorable' ? 'bg-emerald-600 text-white' : 'bg-white/5 text-slate-400'}`}>স্মরণীয় ব্যক্তি</button>
                         </div>
 
                         <form onSubmit={(e) => { e.preventDefault(); handleAddMember(); }} className="mb-6 p-6 bg-white/5 rounded-2xl border border-white/10 grid md:grid-cols-2 gap-4">
