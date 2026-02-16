@@ -50,11 +50,19 @@ const StudentDashboard = () => {
         };
 
         // Push initial state
+        // Prevent Drag-Refresh / Accidental Tab Close
+        const handleBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+
         window.history.pushState(null, null, window.location.pathname);
         window.addEventListener('popstate', handlePopState);
+        window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
             window.removeEventListener('popstate', handlePopState);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
         }
     }, [])
 
@@ -451,27 +459,45 @@ const StudentDashboard = () => {
                 </div>
             </div>
 
+            {/* Headmaster Section */}
+            {teachers.find(t => ['Principal', 'Headmaster', 'সুপার', 'মুহতামিম'].includes(t.designation)) && (
+                <div className="bg-amber-100 p-4 rounded-2xl border border-amber-200">
+                    <h3 className="text-lg font-black text-amber-900 mb-3 text-center">প্রতিষ্ঠান প্রধান</h3>
+                    {teachers.filter(t => ['Principal', 'Headmaster', 'সুপার', 'মুহতামিম'].includes(t.designation)).map(hm => (
+                        <div key={hm.id} className="flex flex-col items-center gap-2">
+                            <div className="w-16 h-16 rounded-full bg-white overflow-hidden shadow-sm border-2 border-amber-300">
+                                <img src={hm.imageUrl || logo} className="w-full h-full object-cover" alt="Headmaster" />
+                            </div>
+                            <h4 className="font-bold text-slate-900 text-lg">{hm.full_name}</h4>
+                            <p className="text-sm font-bold text-slate-600 mb-2">{hm.designation}</p>
+                            <a href={`tel:${hm.mobile}`} className="flex items-center gap-2 bg-emerald-500 text-white px-4 py-2 rounded-full font-bold shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 transition-colors">
+                                <Phone size={18} /> কল করুন
+                            </a>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Teachers List */}
             <div className="space-y-4">
-                <h3 className="text-lg font-black text-slate-800 px-2">শিক্ষকমণ্ডলী</h3>
-                {teachers.map(teacher => (
+                <h3 className="text-lg font-black text-slate-800 px-2">অন্যান্য শিক্ষকমণ্ডলী</h3>
+                {teachers.filter(t => !['Principal', 'Headmaster', 'সুপার', 'মুহতামিম'].includes(t.designation)).map(teacher => (
                     <div key={teacher.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-full bg-slate-100 overflow-hidden"><img src={teacher.imageUrl || logo} className="w-full h-full object-cover" /></div>
+                        <div className="w-14 h-14 rounded-full bg-slate-100 overflow-hidden shrink-0"><img src={teacher.imageUrl || logo} className="w-full h-full object-cover" /></div>
                         <div className="flex-1">
                             <h4 className="font-bold text-slate-800">{teacher.full_name}</h4>
                             <p className="text-xs text-slate-500 font-bold">{teacher.designation || 'Teacher'}</p>
-                            <div className="flex gap-3 mt-1">
-                                <a href={`tel:${teacher.mobile}`} className="text-emerald-500"><Phone size={16} /></a>
-                                <a href={`mailto:${teacher.email}`} className="text-blue-500"><Mail size={16} /></a>
-                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <a href={`tel:${teacher.mobile}`} className="text-emerald-500 bg-emerald-50 p-2 rounded-full"><Phone size={18} /></a>
                         </div>
                     </div>
                 ))}
             </div>
 
 
-            {/* Developer Profile - Updated Design */}
-            <div className="bg-slate-900 rounded-3xl p-6 text-white text-center relative overflow-hidden transition-all duration-300">
+            {/* Developer Profile - Compact & Centered */}
+            <div className="bg-slate-900 rounded-3xl p-6 text-white text-center relative overflow-hidden transition-all duration-300 max-w-xs mx-auto shadow-2xl shadow-slate-900/40">
                 <div className="relative z-10">
                     <h3 className="text-lg font-bold text-emerald-400 mb-2">ডেভেলপার পরিচিতি</h3>
                     <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500 to-indigo-500 p-0.5 mx-auto mb-3 shadow-lg shadow-emerald-500/20">
