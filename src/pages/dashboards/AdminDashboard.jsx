@@ -25,8 +25,8 @@ import Preloader from '../../components/Preloader';
 // --- Utility: Image Compression (Using browser-image-compression) ---
 const compressImage = async (file) => {
     const options = {
-        maxSizeMB: 0.15, // Target 100-150KB
-        maxWidthOrHeight: 1200,
+        maxSizeMB: 0.15, // Strictly under 200KB
+        maxWidthOrHeight: 1000, // Reduced resolution for safety
         useWebWorker: true,
         fileType: 'image/webp'
     }
@@ -577,8 +577,24 @@ const AdminDashboard = () => {
 
     // Cleanup Session on Unmount (Strict Security)
     useEffect(() => {
+        // Mobile Back Button Handler
+        const handlePopState = (event) => {
+            if (window.innerWidth < 768) {
+                event.preventDefault();
+                setShowSidebar(true);
+                // Re-push state to allow another back press to trigger this again if needed, 
+                // or just keep it open. To prevent exiting:
+                window.history.pushState(null, null, window.location.pathname);
+            }
+        };
+
+        // Push initial state to trap back button
+        window.history.pushState(null, null, window.location.pathname);
+        window.addEventListener('popstate', handlePopState);
+
         return () => {
             sessionStorage.removeItem('adminUnlocked');
+            window.removeEventListener('popstate', handlePopState);
         }
     }, [])
 
@@ -676,7 +692,7 @@ const AdminDashboard = () => {
             setStats(prev => ({ ...prev, pending: snap.size }))
             setAdmissions(snap.docs.map(d => ({ id: d.id, ...d.data() })))
         })
-        const unsubStudents = onSnapshot(collection(db, 'students'), (snap) => {
+        const unsubStudents = onSnapshot(query(collection(db, 'students'), orderBy('roll', 'asc')), (snap) => {
             setStats(prev => ({ ...prev, students: snap.size }))
             setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })))
         })
@@ -712,7 +728,7 @@ const AdminDashboard = () => {
         const [rSnap, aSnap, cSnap, mSnap, eSnap, hifzSnap, nuraniSnap, admSnap, sSnap] = await Promise.all([
             getDocs(collection(db, 'exam_routines')),
             getDocs(collection(db, 'success_students')),
-            getDocs(collection(db, 'committee')),
+            getDocs(query(collection(db, 'committee'), orderBy('createdAt', 'asc'))),
             getDocs(collection(db, 'memorable')),
             getDocs(collection(db, 'events')),
             getDocs(query(collection(db, 'hifz_department'), orderBy('createdAt', 'desc'))),
@@ -736,8 +752,32 @@ const AdminDashboard = () => {
 
     // --- ImgBB Upload Helper ---
     const uploadToImgBB = async (file) => {
+        // Strict Compression before Upload
+        let fileToUpload = file;
+        try {
+            console.log("Original Size:", (file.size / 1024).toFixed(2) + " KB");
+            const compressed = await compressImage(file);
+            console.log("Compressed Size:", (compressed.size / 1024).toFixed(2) + " KB");
+
+            // Check if strict limit met (200KB = 204800 bytes)
+            if (compressed.size > 200 * 1024) {
+                // Aggressive retry if still > 200KB
+                const aggressiveOptions = {
+                    maxSizeMB: 0.1,
+                    maxWidthOrHeight: 800,
+                    useWebWorker: true,
+                    fileType: 'image/webp'
+                };
+                fileToUpload = await imageCompression(file, aggressiveOptions);
+            } else {
+                fileToUpload = compressed;
+            }
+        } catch (err) {
+            console.error("Compression Failed, using original", err);
+        }
+
         const formData = new FormData();
-        formData.append('image', file, file.name || 'image.webp');
+        formData.append('image', fileToUpload, 'image.webp');
         const API_KEY = 'E22c8bb3aff47463d2a22e38293bac01'; // User provided API Key
         const url = `https://api.imgbb.com/1/upload?key=${API_KEY}`;
         try {
@@ -1037,13 +1077,24 @@ const AdminDashboard = () => {
 
     // -- STUDENT ADD/UPDATE LOGIC (4th-10th) --
     const handleAddStudent = async () => {
-        const { name, class: className, roll, login_mobile, password } = formData;
+        const { name, class: className, roll, login_mobile, password, father_name, mother_name } = formData;
 
         // Validation
-        if (!name || !className || !roll) {
-            toast.error('নাম, ক্লাস এবং রোল নম্বর আবশ্যক!');
+        if (!name || !className || !roll || !father_name || !mother_name) {
+            toast.error('নাম, পিতা/মাতার নাম, ক্লাস এবং রোল নম্বর আবশ্যক!');
             return;
         }
+
+        // Duplicate Roll Check
+        if (!formData.editMode) {
+            const q = query(collection(db, 'students'), where('class', '==', className), where('roll', '==', roll));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                toast.error('এই রোলটি এই ক্লাসে ইতিমধ্যে ব্যবহৃত হয়েছে');
+                return;
+            }
+        }
+
         if (!formData.editMode && (!login_mobile || !password)) {
             toast.error('লগইন মোবাইল এবং পাসওয়ার্ড আবশ্যক!');
             return;
@@ -1698,13 +1749,25 @@ const AdminDashboard = () => {
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <Input placeholder="অভিভাবকের নাম" value={formData.guardian_name || ''} onChange={e => setFormData({ ...formData, guardian_name: e.target.value })} />
+                                        <Input placeholder="পিতার নাম *" value={formData.father_name || ''} onChange={e => setFormData({ ...formData, father_name: e.target.value })} required />
+                                        <Input placeholder="মাতার নাম *" value={formData.mother_name || ''} onChange={e => setFormData({ ...formData, mother_name: e.target.value })} required />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Input placeholder="বর্তমান ঠিকানা" value={formData.present_address || ''} onChange={e => setFormData({ ...formData, present_address: e.target.value })} />
+                                        <Input placeholder="স্থায়ী ঠিকানা" value={formData.permanent_address || ''} onChange={e => setFormData({ ...formData, permanent_address: e.target.value })} />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <Input placeholder="থানা" value={formData.thana || ''} onChange={e => setFormData({ ...formData, thana: e.target.value })} />
+                                        <Input placeholder="জেলা" value={formData.district || ''} onChange={e => setFormData({ ...formData, district: e.target.value })} />
+                                        <Input placeholder="বিভাগ" value={formData.division || ''} onChange={e => setFormData({ ...formData, division: e.target.value })} />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <Input placeholder="অভিভাবকের NID" value={formData.guardian_nid || ''} onChange={e => setFormData({ ...formData, guardian_nid: e.target.value })} />
                                         <Input placeholder="অভিভাবকের মোবাইল" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                                         <Input placeholder="সম্পর্ক (পিতা/মাতা...)" value={formData.relation || ''} onChange={e => setFormData({ ...formData, relation: e.target.value })} />
                                     </div>
 
-                                    <textarea placeholder="ঠিকানা..." value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} className="w-full bg-slate-800 border-b border-slate-700 rounded-t-lg p-3 text-white focus:border-indigo-500 focus:outline-none transition-colors" />
+
 
                                     <div className="p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20 space-y-3">
                                         <h4 className="text-sm font-bold text-indigo-300">লগইন তথ্য (শিক্ষার্থীর জন্য)</h4>

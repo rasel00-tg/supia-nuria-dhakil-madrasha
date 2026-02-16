@@ -12,7 +12,7 @@ const CommitteeList = () => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const q = query(collection(db, 'committee'), orderBy('createdAt', 'desc'))
+        const q = query(collection(db, 'committee'), orderBy('createdAt', 'asc'))
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const list = snapshot.docs.map(doc => ({
                 id: doc.id,

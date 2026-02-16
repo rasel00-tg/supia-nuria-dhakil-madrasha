@@ -13,7 +13,7 @@ const StudentsList = () => {
     const [selectedClass, setSelectedClass] = useState('All')
 
     useEffect(() => {
-        const q = query(collection(db, 'students'), orderBy('createdAt', 'desc'))
+        const q = query(collection(db, 'students'), orderBy('roll', 'asc'))
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const list = snapshot.docs.map(doc => ({
                 id: doc.id,
