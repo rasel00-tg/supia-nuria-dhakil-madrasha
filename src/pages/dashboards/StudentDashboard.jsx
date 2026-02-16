@@ -25,6 +25,19 @@ const StudentDashboard = () => {
     const [selectedNotice, setSelectedNotice] = useState(null)
     const [newNote, setNewNote] = useState('')
     const [selectedResultStudent, setSelectedResultStudent] = useState(null)
+    const [isDevExpanded, setIsDevExpanded] = useState(false)
+
+    const devBio = `আসসালামু আলাইকুম ওয়া রহমাতুল্লাহি ওয়া বারাকাতুহু।
+
+আমি রাশেদুল করিম—এই প্রিয় প্রতিষ্ঠানেরই এক সময়কার ক্ষুদ্র একজন শিক্ষার্থী। দীর্ঘ নয়টি বছর আমি এই মাদ্রাসার স্নেহময়, শৃঙ্খলাবদ্ধ ও আলোকিত পরিবেশে শিক্ষা অর্জনের সৌভাগ্য লাভ করেছি। এই অঙ্গনের প্রতিটি ইট-পাথর, প্রতিটি শ্রেণিকক্ষ, প্রতিটি উপদেশ ও সংশোধন আমার চরিত্র গঠনের একেকটি ভিত্তিপ্রস্তর হয়ে আছে। এখানে আমি কেবল পাঠ্যবইয়ের জ্ঞান অর্জন করিনি; বরং শিখেছি আদব, আখলাক, দায়িত্ববোধ ও আত্মমর্যাদার প্রকৃত অর্থ। আমার জীবনের যতটুকু অর্জন, তার পেছনে এই মাদ্রাসার অবদান গভীর ও চিরস্মরণীয়।
+
+বর্তমান যুগ প্রযুক্তিনির্ভর। জ্ঞানের অগ্রযাত্রা এখন ডিজিটাল প্ল্যাটফর্মে দ্রুতগতিতে বিস্তৃত হচ্ছে। এই বাস্তবতাকে সামনে রেখে আমি আমাদের মাদ্রাসার জন্য একটি আধুনিক ওয়েব অ্যাপ ডেভেলপমেন্টের উদ্যোগ গ্রহণ করেছি। এটি কেবল একটি প্রযুক্তিগত সংযোজন নয়; বরং শিক্ষাব্যবস্থাকে আরও স্বচ্ছ, গতিশীল ও ফলপ্রসূ করার এক সুদূরপ্রসারী প্রয়াস। আমি বিশ্বাস করি, এই স্মার্ট উদ্যোগ আমাদের শিক্ষার্থী ভাই বোনের পাঠদানকে সহজতর করবে, শিক্ষকদের কার্যক্রমকে আরও সংগঠিত করবে এবং অভিভাবকদের সঙ্গে প্রতিষ্ঠানের যোগাযোগকে শক্তিশালী করবে। জ্ঞানের এই ডিজিটাল সেতুবন্ধন আমাদের প্রতিষ্ঠানকে সময়োপযোগী ও প্রতিযোগিতামূলক ধারায় এগিয়ে নিয়ে যাবে, ইনশাআল্লাহ।
+
+প্রিয় ভাই ও বোনেরা, মনে রেখো—এই মাদ্রাসা শুধু আপনাদের শিক্ষালয় নয়; এটি আপনাদের পরিচয়ের ভিত্তি, আদর্শের উৎস এবং ভবিষ্যতের পথনির্দেশক। এর সুনাম রক্ষা, উন্নয়ন ও কল্যাণে নিজ নিজ অবস্থান থেকে কাজ করা আপনাদেরও নৈতিক দায়িত্ব। আপনাদের সাফল্যই এই প্রতিষ্ঠানের গৌরব, আর প্রতিষ্ঠানের মর্যাদাই তোমাদের সম্মান।
+
+শিক্ষকদের প্রতি শ্রদ্ধাশীল হোন, তাঁদের উপদেশকে হৃদয়ে ধারণ করেন। পিতামাতার নির্দেশনা অনুসরণ করেন, কারণ তাঁদের দোয়া ও সন্তুষ্টিই জীবনের সবচেয়ে বড় পুঁজি। অধ্যবসায়, শৃঙ্খলা ও তাকওয়াকে সঙ্গী করে নিজেকে এমনভাবে গড়ে তোলেন, যেন আপনাদের মাধ্যমে সমাজ ও দেশ আলোকিত হয়। দ্বীনি ও দুনিয়াবি উভয় ক্ষেত্রে উৎকর্ষ অর্জন করে আপনারা যেন আদর্শ নাগরিক ও পরিপূর্ণ মানুষ হিসেবে আত্মপ্রকাশ করতে পারেন—এই কামনাই করি।
+
+পরিশেষে, আমাকে আপনাদের দোয়ায় স্মরণ রাখবেন। আল্লাহ তাআলা আমাদের সবাইকে ইলমে নাফে, আমলে সালেহ এবং চরিত্রে দৃঢ়তা দান করুন। তিনি যেন এই প্রতিষ্ঠানকে আরও সমৃদ্ধ ও বরকতময় করে তোলেন এবং আমাদের সকল প্রচেষ্টাকে কবুল করেন। আমীন।`
 
     // --- 1. LOGOUT PROTECTION LOGIC ---
     useEffect(() => {
@@ -86,9 +99,18 @@ const StudentDashboard = () => {
     }
 
     const fetchNotices = () => {
-        const q = query(collection(db, 'notices'), orderBy('createdAt', 'desc'), limit(7))
+        // Filter for 'student' category only as requested
+        const q = query(collection(db, 'notices'), where('category', '==', 'student'), orderBy('createdAt', 'desc'), limit(10))
         onSnapshot(q, (snap) => {
             setNoticeList(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        }, (error) => {
+            console.error("Notice fetch error:", error)
+            // Fallback if index missing or field missing, fetch all then filter client side or show all
+            if (error.code === 'failed-precondition') {
+                // Index missing fallback
+                const fallbackQ = query(collection(db, 'notices'), orderBy('createdAt', 'desc'), limit(10))
+                onSnapshot(fallbackQ, (snap) => setNoticeList(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
+            }
         })
     }
 
@@ -103,10 +125,11 @@ const StudentDashboard = () => {
     }
 
     const fetchClassmates = (className) => {
+        if (!className) return;
         const q = query(collection(db, 'students'), where('class', '==', className), orderBy('roll', 'asc'))
         getDocs(q).then(snap => {
             setClassmates(snap.docs.map(d => ({ id: d.id, ...d.data() })))
-        })
+        }).catch(err => console.error("Classmate fetch error:", err))
     }
 
     const fetchTeachers = () => {
@@ -206,7 +229,7 @@ const StudentDashboard = () => {
                 <div className="bg-white rounded-3xl p-6 shadow-lg border border-slate-100">
                     <div className="flex items-center gap-2 mb-3">
                         <Bell className="text-rose-500 fill-rose-500" size={20} />
-                        <h3 className="font-black text-slate-800">সর্বশেষ নোটিশ</h3>
+                        <h3 className="font-black text-slate-800">সাম্প্রতিক নোটিশ</h3>
                     </div>
                     <h4 className="text-lg font-bold mb-2 line-clamp-2">{noticeList[0].title || noticeList[0].notice_title}</h4>
                     <p className="text-slate-500 text-sm line-clamp-3 mb-4">{noticeList[0].description || 'বিস্তারিত দেখুন...'}</p>
@@ -365,19 +388,19 @@ const StudentDashboard = () => {
                 <p className="opacity-80 font-bold">সহপাঠীদের তালিকা</p>
             </div>
 
-            <div className="bg-white rounded-3xl overflow-hidden shadow-lg border border-slate-100">
+            <div className="bg-white rounded-3xl overflow-hidden shadow-lg border border-slate-100 divide-y divide-slate-50">
                 {classmates.map((mate, i) => (
-                    <div key={i} className={`flex items-center gap-4 p-4 border-b border-slate-50 last:border-0 ${mate.roll === userProfile?.roll ? 'bg-indigo-50' : ''}`}>
-                        <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm">
-                            <img src={mate.imageUrl || logo} className="w-full h-full object-cover" />
+                    <div key={i} className={`flex items-center gap-4 p-4 transition-colors ${mate.roll === userProfile?.roll ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                        <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm shrink-0">
+                            <img src={mate.imageUrl || logo} className="w-full h-full object-cover" alt={mate.name} />
                         </div>
                         <div>
-                            <h4 className="font-bold text-slate-800">{mate.full_name || mate.name} {mate.roll === userProfile?.roll && <span className="text-indigo-600 text-xs">(আমি)</span>}</h4>
-                            <p className="text-xs text-slate-500 font-bold">Roll No: {mate.roll}</p>
+                            <h4 className="font-bold text-slate-800">{mate.full_name || mate.name || 'Unknown'} {mate.roll === userProfile?.roll && <span className="text-indigo-600 text-xs">(আমি)</span>}</h4>
+                            <p className="text-xs text-slate-500 font-bold">Roll No: {mate.roll || 'N/A'}</p>
                         </div>
                     </div>
                 ))}
-                {classmates.length === 0 && <p className="p-8 text-center text-slate-400">Loading...</p>}
+                {classmates.length === 0 && <p className="p-8 text-center text-slate-400">Loading or No Students Found...</p>}
             </div>
         </div>
     )
@@ -445,15 +468,28 @@ const StudentDashboard = () => {
                 ))}
             </div>
 
-            {/* Developer Profile */}
-            <div className="bg-slate-900 rounded-3xl p-6 text-white text-center relative overflow-hidden">
+
+            {/* Developer Profile - Updated Design */}
+            <div className="bg-slate-900 rounded-3xl p-6 text-white text-center relative overflow-hidden transition-all duration-300">
                 <div className="relative z-10">
                     <h3 className="text-lg font-bold text-emerald-400 mb-2">ডেভেলপার পরিচিতি</h3>
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-emerald-500 to-indigo-500 p-0.5 mx-auto mb-3">
-                        <img src="/assets/dev.png" className="w-full h-full rounded-full object-cover bg-slate-800" />
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-emerald-500 to-indigo-500 p-0.5 mx-auto mb-3 shadow-lg shadow-emerald-500/20">
+                        <img src="/assets/dev.png" className="w-full h-full rounded-full object-cover bg-slate-800" alt="Developer" />
                     </div>
-                    <h4 className="font-bold text-lg">রাশেদুল করিম</h4>
-                    <p className="text-xs text-slate-400 max-w-xs mx-auto mt-2">সাবেক শিক্ষার্থী, সুফিয়া নূরীয়া দাখিল মাদ্রাসা। এই প্রজেক্টটি মাদ্রাসার আধুনিকায়নের লক্ষ্যে তৈরি।</p>
+                    <h4 className="font-bold text-xl mb-4">রাশেদুল করিম</h4>
+
+                    <div className={`text-sm text-slate-300 text-justify bg-slate-800/50 p-4 rounded-xl leading-relaxed whitespace-pre-line ${!isDevExpanded ? 'line-clamp-4' : ''}`}>
+                        {devBio}
+                    </div>
+
+                    <button
+                        onClick={() => setIsDevExpanded(!isDevExpanded)}
+                        className="mt-4 px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-full text-xs font-bold transition-colors shadow-lg shadow-emerald-900/50"
+                    >
+                        {isDevExpanded ? 'কিঞ্চিৎ পড়ুন' : 'বিস্তারিত পড়ুন'}
+                    </button>
+
+                    <p className="text-[10px] text-slate-500 mt-4 opacity-60">© 2026 Developed for Supia Nuria Dakhil Madrasa</p>
                 </div>
             </div>
         </div>
@@ -461,7 +497,7 @@ const StudentDashboard = () => {
 
 
     return (
-        <div className="min-h-screen bg-slate-50 font-bengali text-slate-800 relative">
+        <div className="min-h-screen bg-slate-50 font-bengali text-slate-800 relative overscroll-contain">
 
             {/* --- HEADER --- */}
             <div className="bg-white/80 backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex justify-between items-center shadow-sm">
@@ -473,7 +509,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* --- MAIN CONTENT AREA --- */}
-            <div className="px-4 py-6 max-w-md mx-auto md:max-w-2xl">
+            <div className="px-4 py-6 max-w-md mx-auto md:max-w-4xl lg:max-w-7xl">
                 {activeTab === 'home' && renderHome()}
                 {activeTab === 'homework' && renderHomework()}
                 {activeTab === 'result' && renderResult()}
