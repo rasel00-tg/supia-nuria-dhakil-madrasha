@@ -74,11 +74,12 @@ const StudentDashboard = () => {
 
     // Dependent Queries (Need Class Info)
     useEffect(() => {
-        if (userProfile?.class) {
-            fetchHomework(userProfile.class);
-            fetchClassmates(userProfile.class);
+        const studentClass = userProfile?.class || userProfile?.admission_class;
+        if (studentClass) {
+            fetchHomework(studentClass);
+            fetchClassmates(studentClass);
             // Fetch Results for this class (mock logic or real if collection exists)
-            fetchResults(userProfile.class);
+            fetchResults(studentClass);
         }
         fetchTeachers(); // General
     }, [userProfile])
@@ -232,7 +233,7 @@ const StudentDashboard = () => {
                         <h3 className="font-black text-slate-800">সাম্প্রতিক নোটিশ</h3>
                     </div>
                     <h4 className="text-lg font-bold mb-2 line-clamp-2">{noticeList[0].title || noticeList[0].notice_title}</h4>
-                    <p className="text-slate-500 text-sm line-clamp-3 mb-4">{noticeList[0].description || 'বিস্তারিত দেখুন...'}</p>
+                    <p className="text-slate-500 text-sm line-clamp-3 mb-4">{noticeList[0].description || noticeList[0].details || noticeList[0].content || 'বিস্তারিত দেখুন...'}</p>
                     <button
                         onClick={() => setSelectedNotice(noticeList[0])}
                         className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors border border-slate-200"
@@ -509,7 +510,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* --- MAIN CONTENT AREA --- */}
-            <div className="px-4 py-6 max-w-md mx-auto md:max-w-4xl lg:max-w-7xl">
+            <div className="px-4 py-6 max-w-md mx-auto md:max-w-4xl lg:max-w-7xl w-full">
                 {activeTab === 'home' && renderHome()}
                 {activeTab === 'homework' && renderHomework()}
                 {activeTab === 'result' && renderResult()}
@@ -554,7 +555,7 @@ const StudentDashboard = () => {
                                 <h3 className="text-xl font-black text-slate-800">{selectedNotice.title || selectedNotice.notice_title}</h3>
                                 <button onClick={() => setSelectedNotice(null)} className="p-2 bg-slate-100 rounded-full"><X size={20} /></button>
                             </div>
-                            <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{selectedNotice.description}</p>
+                            <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{selectedNotice.description || selectedNotice.details || selectedNotice.content || 'বিস্তারিত তথ্য দেওয়া হয়নি।'}</p>
                             <div className="mt-6 pt-4 border-t text-xs text-slate-400 font-bold">
                                 প্রকাশিত: {formatDate(selectedNotice.createdAt || selectedNotice.date)}
                             </div>
