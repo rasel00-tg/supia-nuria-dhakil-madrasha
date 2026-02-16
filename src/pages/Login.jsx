@@ -204,6 +204,31 @@ const Login = () => {
         } catch (err) {
             console.error("Login Error:", err)
 
+            // Try Teacher Login (Manual Auth - Fallback for Password Resets)
+            try {
+                const q = query(
+                    collection(db, 'teachers'),
+                    where('email', '==', formData.email),
+                    where('password', '==', formData.password)
+                )
+                const querySnapshot = await getDocs(q)
+
+                if (!querySnapshot.empty) {
+                    const teacherData = querySnapshot.docs[0].data()
+
+                    setPopup({
+                        isOpen: true,
+                        title: 'স্বাগতম!',
+                        message: `প্রিয় শিক্ষক ${teacherData.full_name}, আসসালামু আলাইকুম। আপনাকে প্যানেলে স্বাগতম।`,
+                        targetPath: '/teacher'
+                    })
+                    setLoading(false)
+                    return
+                }
+            } catch (subErr) {
+                console.error("Teacher Auth Error:", subErr)
+            }
+
             // Try Nurani Student Login (Manual Auth)
             try {
                 const q = query(

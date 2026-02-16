@@ -143,7 +143,7 @@ const Contact = () => {
                                     </div>
                                     <div className="space-y-0.5 md:space-y-1 w-full min-w-0">
                                         <h4 className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-500">Email</h4>
-                                        <p className="text-[10px] md:text-xl font-bold break-all leading-tight">supianuriadhakil...</p>
+                                        <p className="text-[10px] md:text-xl font-bold break-all leading-tight">supianuriadhakil.edu@gmail.com</p>
                                     </div>
                                 </div>
 
@@ -153,7 +153,7 @@ const Contact = () => {
                                     </div>
                                     <div className="space-y-0.5 md:space-y-1">
                                         <h4 className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-500">Address</h4>
-                                        <p className="text-[10px] md:text-lg font-bold leading-tight">বটতলী রোড, টেকনাফ</p>
+                                        <p className="text-[10px] md:text-lg font-bold leading-tight">নতুন পল্লান পাড়া, টেকনাফ, কক্সবাজার।</p>
                                     </div>
                                 </div>
 

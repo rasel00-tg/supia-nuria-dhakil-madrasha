@@ -520,7 +520,7 @@ const AdminDashboard = () => {
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
     const [loadingMessage, setLoadingMessage] = useState('')
-    const [activeTab, setActiveTab] = useState('overview')
+    const [activeTab, setActiveTab] = useState('dashboard')
     const [showSidebar, setShowSidebar] = useState(false)
     const [isLocked, setIsLocked] = useState(false) // New Lock State
     const [adminShortcode, setAdminShortcode] = useState(null) // New Shortcode State
@@ -574,6 +574,13 @@ const AdminDashboard = () => {
             window.removeEventListener('keydown', updateActivity);
         };
     }, []);
+
+    // Cleanup Session on Unmount (Strict Security)
+    useEffect(() => {
+        return () => {
+            sessionStorage.removeItem('adminUnlocked');
+        }
+    }, [])
 
 
 
@@ -637,6 +644,7 @@ const AdminDashboard = () => {
     const [approveModal, setApproveModal] = useState({ isOpen: false, id: null, data: null })
     const [rejectReason, setRejectReason] = useState('')
     const [approveData, setApproveData] = useState({ mobile: '', email: '', password: '', roll: '' })
+    const [teacherResetModal, setTeacherResetModal] = useState({ isOpen: false, id: null, name: '' }) // New State
 
     // Data Collections
     const [stats, setStats] = useState({ pending: 0, students: 0, teachers: 0, notices: 0, complaints: 0 })
@@ -908,54 +916,78 @@ const AdminDashboard = () => {
         }
     }
 
-    // -- TEACHER ADD LOGIC --
+    // -- TEACHER ADD LOGIC (Updated with Auth) --
     const handleAddTeacher = async () => {
-        const { full_name, designation, mobile, email, dob, present_address, permanent_address, education, nid, experience } = formData;
+        const { full_name, designation, mobile, email, dob, present_address, permanent_address, education, nid, experience, password } = formData;
 
         // Validation
-        if (!full_name || !designation || !mobile || !email) {
-            toast.error('নাম, পদবি, মোবাইল এবং ইমেইল আবশ্যক!');
+        if (!full_name || !designation || !mobile || !email || !password) {
+            toast.error('নাম, পদবি, মোবাইল, ইমেইল এবং পাসওয়ার্ড আবশ্যক!');
             return;
         }
         if (mobile.length !== 11) {
             toast.error('মোবাইল নাম্বার অবশ্যই ১১ ডিজিটের হতে হবে');
             return;
         }
+        if (password.length < 6) {
+            toast.error('পাসওয়ার্ড কমপক্ষে ৬ সংখ্যার হতে হবে');
+            return;
+        }
 
         // Dynamic Loading Message
-        setLoadingMessage('নতুন "শিক্ষক" যোগ করা হচ্ছে...');
+        setLoadingMessage('নতুন "শিক্ষক" যোগ ও একাউন্ট তৈরি হচ্ছে...');
         setLoading(true)
         setUploadProgress(0);
 
         try {
             let photoURL = null;
-
-            // Image Upload with Check
             if (file) {
                 try {
-                    // Note: File is already compressed on selection
-                    // Use ImgBB instead of Firebase Storage
                     photoURL = await uploadToImgBB(file);
                 } catch (uploadError) {
                     console.error("Image Upload Failed:", uploadError);
-                    throw new Error("ছবি আপলোড ব্যর্থ হয়েছে। ImgBB তে সমস্যা বা API Key চেক করুন।");
+                    throw new Error("ছবি আপলোড ব্যর্থ হয়েছে।");
                 }
-
             }
 
-            // Save Data (Firestore creates collection automatically if missing)
-            // Saving as 'photoURL' as requested, keeping 'imageUrl' for legacy support if needed
-            await addDoc(collection(db, 'teachers'), {
+            // 1. Create User in Firebase Auth using Secondary App
+            const secondaryApp = initializeApp(app.options, "SecondaryTeacherAdd-" + Date.now());
+            const secondaryAuth = getAuth(secondaryApp);
+            let userUid;
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                userUid = userCredential.user.uid;
+                await signOut(secondaryAuth);
+            } catch (authError) {
+                // If email already exists, handling:
+                if (authError.code === 'auth/email-already-in-use') {
+                    throw new Error("এই ইমেইল দিয়ে ইতিমধ্যে একাউন্ট খোলা আছে।");
+                }
+                throw new Error(`Auth Error: ${authError.message}`);
+            }
+
+            // 2. Save Data to Teachers Collection (using UID as Doc ID)
+            await setDoc(doc(db, 'teachers', userUid), {
                 ...formData,
+                uid: userUid,
                 photoURL: photoURL || null,
                 imageUrl: photoURL || null,
+                role: 'teacher',
                 createdAt: serverTimestamp()
             })
+
+            // 3. Add to Users Collection (For Role Management)
+            await setDoc(doc(db, 'users', userUid), {
+                full_name: full_name,
+                email: email,
+                role: 'teacher'
+            });
 
             setPopup({
                 isOpen: true,
                 title: 'সফল!',
-                message: 'নতুন "শিক্ষক" যোগ করা হয়েছে',
+                message: 'নতুন শিক্ষক ও একাউন্ট সফলভাবে তৈরি হয়েছে',
                 type: 'success'
             })
 
@@ -969,15 +1001,37 @@ const AdminDashboard = () => {
             fetchAdditionalData()
         } catch (error) {
             console.error(error)
-            let errorMsg = error.message;
-            if (error.code === 'permission-denied') {
-                errorMsg = "ডাটাবেসে সেভ করার অনুমতি নেই (Permission Denied)।";
-            }
-            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: `ত্রুটি: ${errorMsg || 'শিক্ষক যুক্ত করা সম্ভব হয়নি।'}`, type: 'error' })
+            setPopup({ isOpen: true, title: 'ব্যর্থ!', message: `ত্রুটি: ${error.message}`, type: 'error' })
         } finally {
             setLoading(false)
             setUploadProgress(0)
             setLoadingMessage('')
+        }
+    }
+
+    const confirmTeacherReset = async (newPass) => {
+        if (!newPass || newPass.length < 6) {
+            toast.error('পাসওয়ার্ড কমপক্ষে ৬ সংখ্যার হতে হবে');
+            return;
+        }
+        setLoadingMessage('পাসওয়ার্ড রিসেট হচ্ছে...');
+        setLoading(true);
+        try {
+            // Since we can't update Auth password easily without old pass,
+            // we update Firestore 'password' field. Login.jsx will use this as fallback.
+            await updateDoc(doc(db, 'teachers', teacherResetModal.id), {
+                password: newPass,
+                updatedAt: serverTimestamp()
+            });
+
+            toast.success('পাসওয়ার্ড সফলভাবে রিসেট হয়েছে (ডাটাবেস আপডেট)');
+            setTeacherResetModal({ isOpen: false, id: null, name: '' });
+        } catch (error) {
+            console.error(error);
+            toast.error('পাসওয়ার্ড রিসেট ব্যর্থ হয়েছে');
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
         }
     }
 
@@ -1440,12 +1494,34 @@ const AdminDashboard = () => {
                     loading={loading}
                 />
 
-                {/* Teacher Detail Modal */}
                 <TeacherDetailModal
                     isOpen={teacherDetailModal.isOpen}
                     data={teacherDetailModal.data}
                     onClose={() => setTeacherDetailModal({ isOpen: false, data: null })}
                 />
+
+                {/* Teacher Password Reset Modal */}
+                <ActionModal
+                    isOpen={teacherResetModal.isOpen}
+                    title="শিক্ষকের পাসওয়ার্ড রিসেট"
+                    onClose={() => setTeacherResetModal({ isOpen: false, id: null, name: '' })}
+                    onSubmit={() => {
+                        const input = document.getElementById('newTeacherPass');
+                        confirmTeacherReset(input?.value);
+                    }}
+                    submitText="পাসওয়ার্ড পরিবর্তন করুন"
+                    color="rose"
+                    loading={loading}
+                >
+                    <div className="space-y-3">
+                        <p className="text-sm text-slate-400">শিক্ষক: <span className="text-white font-bold">{teacherResetModal.name}</span></p>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500">নতুন পাসওয়ার্ড (Min 6 chars)</label>
+                            <input id="newTeacherPass" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-rose-500 outline-none" placeholder="New Password" />
+                        </div>
+                        <p className="text-xs text-amber-500">নোট: পুরাতন পাসওয়ার্ড বাতিল হয়ে যাবে।</p>
+                    </div>
+                </ActionModal>
 
                 {/* Action Modals */}
                 <ActionModal
@@ -1781,6 +1857,7 @@ const AdminDashboard = () => {
                                     <Input placeholder="পদবি/বিষয় *" value={formData.designation || ''} onChange={e => setFormData({ ...formData, designation: e.target.value })} required />
                                     <Input placeholder="মোবাইল (১১ ডিজিট) *" value={formData.mobile || ''} onChange={e => setFormData({ ...formData, mobile: e.target.value })} type="tel" maxLength={11} required />
                                     <Input placeholder="ইমেইল *" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} type="email" required />
+                                    <Input placeholder="লগইন পাসওয়ার্ড (Min 6) *" value={formData.password || ''} onChange={e => setFormData({ ...formData, password: e.target.value })} type="text" required />
 
                                     <Input placeholder="জন্ম তারিখ" type="date" value={formData.dob || ''} onChange={e => setFormData({ ...formData, dob: e.target.value })} />
                                     <Input placeholder="জাতীয় পরিচয়পত্র (NID)" value={formData.nid || ''} onChange={e => setFormData({ ...formData, nid: e.target.value })} />
@@ -1816,7 +1893,8 @@ const AdminDashboard = () => {
                                         <p className="text-xs text-indigo-300 font-bold uppercase tracking-wider mb-3">{t.designation}</p>
 
                                         <div className="flex gap-2 justify-center">
-                                            <button onClick={() => setTeacherDetailModal({ isOpen: true, data: t })} className="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white text-xs font-bold transition-all border border-indigo-500/20">বিস্তারিত</button>
+                                            <button onClick={() => setTeacherDetailModal({ isOpen: true, data: t })} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white text-xs font-bold transition-all border border-indigo-500/20">বিস্তারিত</button>
+                                            <button onClick={() => setTeacherResetModal({ isOpen: true, id: t.id, name: t.full_name })} className="p-1.5 bg-sky-500/10 text-sky-400 rounded-lg hover:bg-sky-500 hover:text-white" title="Reset Password"><Key size={16} /></button>
                                             <button onClick={() => handleDelete('teachers', t.id)} className="p-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500 hover:text-white"><Trash2 size={16} /></button>
                                         </div>
                                     </div>

@@ -114,13 +114,13 @@ const Footer = () => {
                         </p>
                         <div className="flex justify-center md:justify-start gap-4">
                             {[
-                                { icon: Facebook, color: 'hover:bg-[#1877F2]' },
-                                { icon: Youtube, color: 'hover:bg-[#FF0000]' },
-                                { icon: Twitter, color: 'hover:bg-[#1DA1F2]' }
+                                { icon: Facebook, color: 'hover:bg-[#1877F2]', link: 'https://www.facebook.com/share/1AYXUXtvfr/' },
+                                { icon: Youtube, color: 'hover:bg-[#FF0000]', link: '#' },
+                                { icon: Twitter, color: 'hover:bg-[#1DA1F2]', link: '#' }
                             ].map((social, i) => (
-                                <button key={i} className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center transition-all ${social.color} hover:text-white group`}>
+                                <a href={social.link} target="_blank" rel="noopener noreferrer" key={i} className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center transition-all ${social.color} hover:text-white group`}>
                                     <social.icon size={18} className="group-hover:scale-110 transition-transform" />
-                                </button>
+                                </a>
                             ))}
                         </div>
                     </div>
@@ -155,7 +155,7 @@ const Footer = () => {
                                 <div className="w-10 h-10 bg-white/5 rounded-xl hidden md:flex items-center justify-center shrink-0">
                                     <MapPin size={20} className="text-emerald-500" />
                                 </div>
-                                <p className="font-bold">টেকনাফ, কক্সবাজার</p>
+                                <p className="font-bold">নতুন পল্লান পাড়া, টেকনাফ, কক্সবাজার।</p>
                             </div>
                             <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-start md:items-center">
                                 <Phone size={16} className="text-indigo-500 md:hidden" />
@@ -169,7 +169,7 @@ const Footer = () => {
                                 <div className="w-10 h-10 bg-white/5 rounded-xl hidden md:flex items-center justify-center shrink-0">
                                     <Mail size={20} className="text-purple-500" />
                                 </div>
-                                <p className="font-bold break-all">supianuriadakhilmadrasha@gmail.com</p>
+                                <p className="font-bold break-all">supianuriadhakil.edu@gmail.com</p>
                             </div>
                         </div>
                     </div>
