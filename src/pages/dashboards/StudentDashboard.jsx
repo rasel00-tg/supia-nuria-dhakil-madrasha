@@ -533,7 +533,7 @@ const StudentDashboard = () => {
 
 
     return (
-        <div className="min-h-screen bg-slate-50 font-bengali text-slate-800 relative overscroll-contain">
+        <div className="min-h-screen bg-slate-50 font-bengali text-slate-800 relative overscroll-contain" style={{ overscrollBehaviorY: 'contain' }}>
 
             {/* --- HEADER --- */}
             <div className="bg-white/80 backdrop-blur-md sticky top-0 z-30 px-6 py-4 flex justify-between items-center shadow-sm">

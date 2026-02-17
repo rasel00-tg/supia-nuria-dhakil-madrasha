@@ -66,26 +66,7 @@ const Login = () => {
     const [lockoutEndTime, setLockoutEndTime] = useState(null)
     const [timeLeft, setTimeLeft] = useState(null)
 
-    // Initialize state
-    React.useEffect(() => {
-        const storedAttempts = parseInt(localStorage.getItem('loginFailedAttempts') || '0')
-        const storedLockoutTime = localStorage.getItem('loginLockoutEndTime')
-
-        setFailedAttempts(storedAttempts)
-
-        if (storedLockoutTime) {
-            const endTime = parseInt(storedLockoutTime)
-            if (Date.now() < endTime) {
-                setIsLocked(true)
-                setLockoutEndTime(endTime)
-            } else {
-                localStorage.removeItem('loginLockoutEndTime')
-                localStorage.setItem('loginFailedAttempts', '0')
-                setFailedAttempts(0)
-                setIsLocked(false)
-            }
-        }
-    }, [])
+    // Old global effect removed to prevent conflict with account-specific locking
 
     // Timer Logic
     React.useEffect(() => {
@@ -123,20 +104,48 @@ const Login = () => {
         }).join('');
     };
 
-    const handleFailedAttempt = () => {
-        const newAttempts = failedAttempts + 1
-        setFailedAttempts(newAttempts)
-        localStorage.setItem('loginFailedAttempts', newAttempts.toString())
+    // Check Lock Status for a specific email
+    const checkLockStatus = (email) => {
+        if (!email) return { isLocked: false, timeLeft: null };
+        const endTime = localStorage.getItem(`lockout_${email}`);
+        if (endTime && parseInt(endTime) > Date.now()) {
+            const diff = parseInt(endTime) - Date.now();
+            const minutes = Math.floor((diff / 1000 / 60) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+            return { isLocked: true, timeLeft: `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}` };
+        }
+        return { isLocked: false, timeLeft: null };
+    };
 
-        if (newAttempts >= 5) {
-            const lockoutDuration = 60 * 60 * 1000 // 1 hour
-            const endTime = Date.now() + lockoutDuration
-            setIsLocked(true)
-            setLockoutEndTime(endTime)
-            localStorage.setItem('loginLockoutEndTime', endTime.toString())
-            setError('অতিরিক্ত ভুল চেষ্টার কারণে আপনার অ্যাকাউন্টটি ১ ঘণ্টার জন্য লক করা হয়েছে।')
+    // Timer Logic for UI Update
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            const email = toEnglishDigits(formData.email);
+            const status = checkLockStatus(email);
+            setIsLocked(status.isLocked);
+            setTimeLeft(status.timeLeft);
+
+            // Auto unlock cleanup
+            if (!status.isLocked && localStorage.getItem(`lockout_${email}`)) {
+                localStorage.removeItem(`lockout_${email}`);
+                localStorage.removeItem(`attempts_${email}`);
+            }
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [formData.email]);
+
+    const handleFailedAttempt = (email) => {
+        const currentAttempts = parseInt(localStorage.getItem(`attempts_${email}`) || '0') + 1;
+        localStorage.setItem(`attempts_${email}`, currentAttempts.toString());
+
+        if (currentAttempts >= 5) {
+            const lockoutDuration = 60 * 60 * 1000; // 1 hour
+            const endTime = Date.now() + lockoutDuration;
+            localStorage.setItem(`lockout_${email}`, endTime.toString());
+            setIsLocked(true);
+            setError('অতিরিক্ত ভুল চেষ্টার কারণে এই অ্যাকাউন্টটি ১ ঘণ্টার জন্য লক করা হয়েছে।');
         } else {
-            setError(`পাসওয়ার্ড ভুল হয়েছে। (চেষ্টা ${newAttempts}/5)`)
+            setError(`পাসওয়ার্ড ভুল হয়েছে। (চেষ্টা ${currentAttempts}/5)`);
         }
     }
 
@@ -147,16 +156,22 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        if (isLocked) return
+
+        // Mobile number and Password normalization (Bengali to English)
+        const inputEmail = toEnglishDigits(formData.email);
+        const inputPassword = toEnglishDigits(formData.password);
+
+        // Check lock status before proceeding
+        const lockStatus = checkLockStatus(inputEmail);
+        if (lockStatus.isLocked) {
+            setError('অতিরিক্ত ভুল চেষ্টার কারণে এই অ্যাকাউন্টটি ১ ঘণ্টার জন্য লক করা হয়েছে।');
+            return;
+        }
 
         setLoading(true)
         setError(null)
 
         try {
-            // Mobile number and Password normalization (Bengali to English)
-            const inputEmail = toEnglishDigits(formData.email);
-            const inputPassword = toEnglishDigits(formData.password);
-
             let email = inputEmail
             if (/^\d{11}$/.test(email) || !email.includes('@')) {
                 email = email + '@student.com'
@@ -166,10 +181,9 @@ const Login = () => {
             const userCredential = await signInWithEmailAndPassword(auth, email, inputPassword)
             const user = userCredential.user
 
-            // Reset attempts on success
-            setFailedAttempts(0)
-            localStorage.setItem('loginFailedAttempts', '0')
-            localStorage.removeItem('loginLockoutEndTime')
+            // Reset attempts specifically for this email on success
+            localStorage.removeItem(`attempts_${inputEmail}`);
+            localStorage.removeItem(`lockout_${inputEmail}`);
 
             // 2. Strict Role & Existence Check
             // We check specific collections to ensure the user is ACTIVE in that department.
@@ -239,9 +253,6 @@ const Login = () => {
         } catch (err) {
             console.error("Login Error:", err)
 
-            const inputEmail = toEnglishDigits(formData.email);
-            const inputPassword = toEnglishDigits(formData.password);
-
             // Try Teacher Login (Manual Auth - Fallback for Password Resets)
             try {
                 const q = query(
@@ -253,6 +264,10 @@ const Login = () => {
 
                 if (!querySnapshot.empty) {
                     const teacherData = querySnapshot.docs[0].data()
+
+                    // Reset attempts if manual login succeeds
+                    localStorage.removeItem(`attempts_${inputEmail}`);
+                    localStorage.removeItem(`lockout_${inputEmail}`);
 
                     setPopup({
                         isOpen: true,
@@ -279,6 +294,10 @@ const Login = () => {
                 if (!querySnapshot.empty) {
                     const studentData = querySnapshot.docs[0].data()
 
+                    // Reset attempts if manual login succeeds
+                    localStorage.removeItem(`attempts_${inputEmail}`);
+                    localStorage.removeItem(`lockout_${inputEmail}`);
+
                     setPopup({
                         isOpen: true,
                         title: 'স্বাগতম!',
@@ -304,6 +323,10 @@ const Login = () => {
                 if (!querySnapshot.empty) {
                     const studentData = querySnapshot.docs[0].data()
 
+                    // Reset attempts if manual login succeeds
+                    localStorage.removeItem(`attempts_${inputEmail}`);
+                    localStorage.removeItem(`lockout_${inputEmail}`);
+
                     setPopup({
                         isOpen: true,
                         title: 'স্বাগতম!',
@@ -317,12 +340,16 @@ const Login = () => {
                 console.error("Student Auth Error:", subErr)
             }
 
-            handleFailedAttempt()
-            const msg = err.code === 'auth/network-request-failed'
-                ? 'ইন্টারনেট সংযোগ পরীক্ষা করুন।'
-                : 'ইমেইল বা পাসওয়ার্ড সঠিক নয়।'
+            handleFailedAttempt(inputEmail)
 
-            if (!isLocked) setError(msg)
+            // Only show generic error if NOT locked
+            if (!checkLockStatus(inputEmail).isLocked) {
+                const msg = err.code === 'auth/network-request-failed'
+                    ? 'ইন্টারনেট সংযোগ পরীক্ষা করুন।'
+                    : 'ইমেইল বা পাসওয়ার্ড সঠিক নয়।'
+                setError(msg)
+            }
+
             setLoading(false)
         }
     }
@@ -371,7 +398,7 @@ const Login = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden font-bengali">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden font-bengali" style={{ overscrollBehaviorY: 'contain' }}>
             <LoginPopup isOpen={popup.isOpen} title={popup.title} message={popup.message} onClose={handlePopupClose} />
 
             {/* Background Decorations */}
@@ -425,7 +452,6 @@ const Login = () => {
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 required
-                                disabled={isLocked}
                             />
                         </div>
                     </div>
@@ -441,9 +467,9 @@ const Login = () => {
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 required
-                                disabled={isLocked}
+
                             />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 disabled:opacity-50" disabled={isLocked}>
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 disabled:opacity-50">
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
                         </div>
@@ -451,10 +477,10 @@ const Login = () => {
 
                     <div className="flex items-center justify-between text-xs font-bold pt-2">
                         <label className="flex items-center gap-2 cursor-pointer text-slate-500 hover:text-slate-700">
-                            <input type="checkbox" className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" disabled={isLocked} />
+                            <input type="checkbox" className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                             মনে রাখুন
                         </label>
-                        <button type="button" onClick={() => setShowForgotModal(true)} className="text-emerald-600 hover:text-emerald-700 hover:underline disabled:opacity-50" disabled={isLocked}>পাসওয়ার্ড ভুলে গেছেন?</button>
+                        <button type="button" onClick={() => setShowForgotModal(true)} className="text-emerald-600 hover:text-emerald-700 hover:underline disabled:opacity-50">পাসওয়ার্ড ভুলে গেছেন?</button>
                     </div>
 
                     <div className="space-y-3 mt-4">
