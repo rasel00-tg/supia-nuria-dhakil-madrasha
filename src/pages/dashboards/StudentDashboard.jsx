@@ -220,6 +220,15 @@ const StudentDashboard = () => {
             {/* Profile Card (Yellow Theme) */}
             <div className="bg-amber-400 rounded-3xl p-6 text-slate-900 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
+
+                {/* Logout Button Added Here */}
+                <button
+                    onClick={() => setShowLogoutConfirm(true)}
+                    className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 p-2 rounded-full text-slate-900 transition-colors z-20"
+                >
+                    <LogOut size={18} />
+                </button>
+
                 <div className="flex flex-col items-center justify-center relative z-10">
                     <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden mb-3 shadow-md bg-slate-200">
                         <img src={userProfile?.imageUrl || logo} alt="Profile" className="w-full h-full object-cover" />
@@ -532,7 +541,6 @@ const StudentDashboard = () => {
                     <img src={logo} className="w-8 h-8" />
                     <span className="font-black text-slate-800">Student Panel</span>
                 </div>
-                {/* Back Button Removed as per request */}
             </div>
 
             {/* --- MAIN CONTENT AREA --- */}

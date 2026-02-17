@@ -112,6 +112,17 @@ const Login = () => {
         return () => clearInterval(interval)
     }, [isLocked, lockoutEndTime])
 
+    // Helper: Convert Bengali Digits to English
+    const toEnglishDigits = (str) => {
+        if (!str) return str;
+        const bn = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        const en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        return str.toString().split('').map(char => {
+            const index = bn.indexOf(char);
+            return index > -1 ? en[index] : char;
+        }).join('');
+    };
+
     const handleFailedAttempt = () => {
         const newAttempts = failedAttempts + 1
         setFailedAttempts(newAttempts)
@@ -123,7 +134,7 @@ const Login = () => {
             setIsLocked(true)
             setLockoutEndTime(endTime)
             localStorage.setItem('loginLockoutEndTime', endTime.toString())
-            setError('অতিরিক্ত ভুল পাসওয়ার্ডের কারণে অ্যাকাউন্ট ১ ঘন্টার জন্য লক করা হয়েছে।')
+            setError('অতিরিক্ত ভুল চেষ্টার কারণে আপনার অ্যাকাউন্টটি ১ ঘণ্টার জন্য লক করা হয়েছে।')
         } else {
             setError(`পাসওয়ার্ড ভুল হয়েছে। (চেষ্টা ${newAttempts}/5)`)
         }
@@ -142,14 +153,17 @@ const Login = () => {
         setError(null)
 
         try {
-            // Mobile number normalization
-            let email = formData.email
+            // Mobile number and Password normalization (Bengali to English)
+            const inputEmail = toEnglishDigits(formData.email);
+            const inputPassword = toEnglishDigits(formData.password);
+
+            let email = inputEmail
             if (/^\d{11}$/.test(email) || !email.includes('@')) {
                 email = email + '@student.com'
             }
 
             // 1. Firebase Auth
-            const userCredential = await signInWithEmailAndPassword(auth, email, formData.password)
+            const userCredential = await signInWithEmailAndPassword(auth, email, inputPassword)
             const user = userCredential.user
 
             // Reset attempts on success
@@ -225,12 +239,15 @@ const Login = () => {
         } catch (err) {
             console.error("Login Error:", err)
 
+            const inputEmail = toEnglishDigits(formData.email);
+            const inputPassword = toEnglishDigits(formData.password);
+
             // Try Teacher Login (Manual Auth - Fallback for Password Resets)
             try {
                 const q = query(
                     collection(db, 'teachers'),
-                    where('email', '==', formData.email),
-                    where('password', '==', formData.password)
+                    where('email', '==', inputEmail),
+                    where('password', '==', inputPassword)
                 )
                 const querySnapshot = await getDocs(q)
 
@@ -254,8 +271,8 @@ const Login = () => {
             try {
                 const q = query(
                     collection(db, 'nurani_students'),
-                    where('login_mobile', '==', formData.email), // Assuming user entered mobile in email field
-                    where('password', '==', formData.password)
+                    where('login_mobile', '==', inputEmail), // Assuming user entered mobile in email field
+                    where('password', '==', inputPassword)
                 )
                 const querySnapshot = await getDocs(q)
 
@@ -279,8 +296,8 @@ const Login = () => {
             try {
                 const q = query(
                     collection(db, 'students'),
-                    where('login_mobile', '==', formData.email),
-                    where('password', '==', formData.password)
+                    where('login_mobile', '==', inputEmail),
+                    where('password', '==', inputPassword)
                 )
                 const querySnapshot = await getDocs(q)
 
