@@ -1076,6 +1076,18 @@ const AdminDashboard = () => {
     }
 
     // -- STUDENT ADD/UPDATE LOGIC (4th-10th) --
+    // Helper: Convert Bengali Digits to English
+    const toEnglishDigits = (str) => {
+        if (!str) return str;
+        const bn = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        const en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        return str.toString().split('').map(char => {
+            const index = bn.indexOf(char);
+            return index > -1 ? en[index] : char;
+        }).join('');
+    };
+
+    // -- STUDENT ADD/UPDATE LOGIC (4th-10th) --
     const handleAddStudent = async () => {
         const { name, class: className, roll, login_mobile, password, father_name, mother_name } = formData;
 
@@ -1085,9 +1097,14 @@ const AdminDashboard = () => {
             return;
         }
 
+        // 1. Convert Data to English
+        const finalRoll = toEnglishDigits(roll);
+        const finalMobile = toEnglishDigits(login_mobile);
+        const finalGuardianMobile = toEnglishDigits(formData.guardian_mobile); // If exists
+
         // Duplicate Roll Check
         if (!formData.editMode) {
-            const q = query(collection(db, 'students'), where('class', '==', className), where('roll', '==', roll));
+            const q = query(collection(db, 'students'), where('class', '==', className), where('roll', '==', finalRoll));
             const snap = await getDocs(q);
             if (!snap.empty) {
                 toast.error('এই রোলটি এই ক্লাসে ইতিমধ্যে ব্যবহৃত হয়েছে');
@@ -1095,13 +1112,24 @@ const AdminDashboard = () => {
             }
         }
 
-        if (!formData.editMode && (!login_mobile || !password)) {
+        if (!formData.editMode && (!finalMobile || !password)) {
             toast.error('লগইন মোবাইল এবং পাসওয়ার্ড আবশ্যক!');
             return;
         }
         if (!formData.editMode && password.length < 6) {
             toast.error('পাসওয়ার্ড অন্তত ৬ সংখ্যার হতে হবে');
             return;
+        }
+
+        // Duplicate Mobile Check (Strict)
+        if (!formData.editMode) {
+            // Check if mobile already used in students
+            const mobileQ = query(collection(db, 'students'), where('login_mobile', '==', finalMobile));
+            const mobileSnap = await getDocs(mobileQ);
+            if (!mobileSnap.empty) {
+                toast.error('এই মোবাইল নাম্বারটি ইতিমধ্যে ব্যবহৃত হয়েছে!');
+                return;
+            }
         }
 
         setLoadingMessage(formData.editMode ? 'তথ্য আপডেট হচ্ছে...' : 'নতুন শিক্ষার্থী ও একাউন্ট তৈরি হচ্ছে...');
@@ -1118,20 +1146,24 @@ const AdminDashboard = () => {
                 }
             }
 
+            const studentPayload = {
+                ...formData,
+                roll: finalRoll,
+                login_mobile: finalMobile,
+                ...(finalGuardianMobile && { guardian_mobile: finalGuardianMobile }), // Update guardian mobile too if present
+                ...(imageUrl && { imageUrl }),
+                updatedAt: serverTimestamp()
+            };
+
             if (formData.editMode && formData.id) {
                 // Update Logic
-                await updateDoc(doc(db, 'students', formData.id), {
-                    ...formData,
-                    ...(imageUrl && { imageUrl }),
-                    updatedAt: serverTimestamp()
-                });
+                await updateDoc(doc(db, 'students', formData.id), studentPayload);
                 setPopup({ isOpen: true, title: 'সফল!', message: 'শিক্ষার্থীর তথ্য আপডেট হয়েছে।', type: 'success' });
             } else {
                 // Create Logic (with Auth)
-                const email = login_mobile + '@student.com';
+                const email = finalMobile + '@student.com';
 
                 // Secondary App for Auth
-                // Use a unique name to prevent conflicts or handle existing
                 let secondaryApp;
                 try {
                     secondaryApp = initializeApp(app.options, "SecondaryStudentAdd-" + Date.now());
@@ -1150,12 +1182,11 @@ const AdminDashboard = () => {
 
                     // Save to Firestore
                     await setDoc(doc(db, 'students', userUid), {
-                        ...formData,
+                        ...studentPayload,
                         full_name: name, // Ensure consistent field naming
                         email: email,
                         uid: userUid,
                         role: 'student',
-                        imageUrl: imageUrl || null,
                         createdAt: serverTimestamp()
                     });
 

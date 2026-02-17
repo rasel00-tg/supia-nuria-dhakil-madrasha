@@ -532,7 +532,7 @@ const StudentDashboard = () => {
                     <img src={logo} className="w-8 h-8" />
                     <span className="font-black text-slate-800">Student Panel</span>
                 </div>
-                <button onClick={() => setShowLogoutConfirm(true)} className="bg-rose-50 text-rose-500 p-2 rounded-full hover:bg-rose-100"><LogOut size={20} /></button>
+                {/* Back Button Removed as per request */}
             </div>
 
             {/* --- MAIN CONTENT AREA --- */}

@@ -157,27 +157,44 @@ const Login = () => {
             localStorage.setItem('loginFailedAttempts', '0')
             localStorage.removeItem('loginLockoutEndTime')
 
-            // 2. Role Logic
-            const userRef = doc(db, 'users', user.uid)
-            const userSnap = await getDoc(userRef)
+            // 2. Strict Role & Existence Check
+            // We check specific collections to ensure the user is ACTIVE in that department.
+            // If admin deleted them from 'students' but they are still in Auth, this will fail (as required).
             const adminRef = doc(db, 'admins', user.uid)
-            const adminSnap = await getDoc(adminRef)
             const teacherRef = doc(db, 'teachers', user.uid)
-            const teacherSnap = await getDoc(teacherRef)
+            const studentRef = doc(db, 'students', user.uid)
+            const nuraniRef = doc(db, 'nurani_students', user.uid)
 
-            let finalRole = 'student' // Default fallback
-            let displayName = user.displayName || 'User'
+            const [adminSnap, teacherSnap, studentSnap, nuraniSnap] = await Promise.all([
+                getDoc(adminRef),
+                getDoc(teacherRef),
+                getDoc(studentRef),
+                getDoc(nuraniRef)
+            ])
+
+            let finalRole = null;
+            let displayName = '';
 
             if (adminSnap.exists()) {
-                finalRole = 'admin'
-                displayName = adminSnap.data()?.full_name || 'Admin'
+                finalRole = 'admin';
+                displayName = adminSnap.data()?.full_name || 'Admin';
             } else if (teacherSnap.exists()) {
-                finalRole = 'teacher'
-                displayName = teacherSnap.data()?.full_name || 'Teacher'
-            } else if (userSnap.exists()) {
-                const userData = userSnap.data()
-                if (userData.role) finalRole = userData.role.toLowerCase().trim()
-                displayName = userData.full_name || 'Student'
+                finalRole = 'teacher';
+                displayName = teacherSnap.data()?.full_name || 'Teacher';
+            } else if (studentSnap.exists()) {
+                finalRole = 'student';
+                displayName = studentSnap.data()?.full_name || 'Student';
+            } else if (nuraniSnap.exists()) {
+                finalRole = 'student'; // Or nurani specific role if needed, but routing handled below
+                displayName = nuraniSnap.data()?.name || 'Student';
+            }
+
+            // 3. Security Check: If Profile Not Found in Database
+            if (!finalRole) {
+                await auth.signOut(); // Force logout
+                setError('আপনার প্রোফাইল সিস্টেমে খুঁজে পাওয়া যায়নি');
+                setLoading(false);
+                return;
             }
 
             // Show Welcome Popup
@@ -190,14 +207,18 @@ const Login = () => {
                 welcomeMsg = `প্রিয় শিক্ষার্থী ${displayName}, আসসালামু আলাইকুম। আপনাকে স্বাগতম।`
             }
 
+            // Determine Target Path
+            let targetPath = '/student'; // Default
+            if (finalRole === 'admin') targetPath = '/admin';
+            if (finalRole === 'teacher') targetPath = '/teacher';
+            if (nuraniSnap.exists()) targetPath = '/nurani-department'; // Specific routing for Nurani
+
             setPopup({
                 isOpen: true,
                 title: 'স্বাগতম!',
                 message: welcomeMsg,
-                targetPath: `/${finalRole}`
+                targetPath: targetPath
             })
-
-            setLoading(false)
 
             setLoading(false)
 
