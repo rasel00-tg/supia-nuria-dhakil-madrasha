@@ -410,7 +410,7 @@ const Login = () => {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[32px] md:rounded-[40px] shadow-2xl shadow-emerald-900/10 p-6 md:p-10 w-full max-w-md relative z-10 border border-white mb-8"
+                className="bg-white rounded-[32px] md:rounded-[40px] shadow-2xl shadow-emerald-900/10 p-6 md:p-8 w-full max-w-md mx-auto relative z-10 border border-white mb-8"
             >
                 {/* Header */}
                 <div className="text-center mb-8">

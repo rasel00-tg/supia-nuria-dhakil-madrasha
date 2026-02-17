@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Book, Award, Bell, User, Calendar, Check, ArrowLeft, Home, FileText, Users, HelpCircle, ClipboardCheck, CheckCircle, X, ChevronRight, LogOut, Phone, Mail, Facebook } from 'lucide-react'
+import { Book, Award, Bell, User, Calendar, Check, Home, FileText, Users, HelpCircle, ClipboardCheck, CheckCircle, X, ChevronRight, LogOut, Phone, Mail, Facebook } from 'lucide-react'
 import { AuthContext } from '../../App'
 import logo from '../../assets/logo.png'
 import { auth, db } from '../../firebase'
@@ -544,7 +544,7 @@ const StudentDashboard = () => {
             </div>
 
             {/* --- MAIN CONTENT AREA --- */}
-            <div className="px-4 py-6 max-w-md mx-auto md:max-w-4xl lg:max-w-7xl w-full">
+            <div className="px-4 py-6 w-full max-w-7xl mx-auto">
                 {activeTab === 'home' && renderHome()}
                 {activeTab === 'homework' && renderHomework()}
                 {activeTab === 'result' && renderResult()}
